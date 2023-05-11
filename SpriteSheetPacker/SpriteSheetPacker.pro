@@ -131,7 +131,7 @@ win32 {
 CONFIG(release,debug|release) {
     # release
     win32 {
-        QMAKE_POST_LINK = windeployqt $$shell_quote($$shell_path($${DESTDIR}/$${TARGET}.exe))
+        #QMAKE_POST_LINK = windeployqt $$shell_quote($$shell_path($${DESTDIR}/$${TARGET}.exe))
     }
 
     macx {
