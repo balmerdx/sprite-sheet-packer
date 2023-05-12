@@ -72,7 +72,7 @@ public:
                 bool heuristicMask = false,
                 bool pow2 = false,
                 bool forceSquared = false,
-                int maxSize = 8192,
+                QSize maxSize = QSize(8192, 8192),
                 float scale = 1);
 
     void setAlgorithm(const QString& algorithm) { _algorithm = algorithm; }
@@ -104,7 +104,7 @@ private:
     bool _heuristicMask;
     bool _pow2;
     bool _forceSquared;
-    int _maxTextureSize;
+    QSize _maxTextureSize;
     float _scale;
     bool _rotateSprites;
     // polygon mode
@@ -121,5 +121,7 @@ private:
 
     bool _aborted;
 };
+
+extern bool verbose;
 
 #endif // SPRITEATLAS_H

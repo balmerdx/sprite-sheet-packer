@@ -2,6 +2,7 @@
 #include "SpriteAtlas.h"
 #include "PublishSpriteSheet.h"
 #include "SpritePackerProjectFile.h"
+bool verbose = false;
 
 int commandLine(QCoreApplication& app) {
     QCommandLineParser parser;
@@ -11,6 +12,7 @@ int commandLine(QCoreApplication& app) {
     parser.addPositionalArgument("source", "Sprites for packing or project file (You can override project file options with [options]).");
     parser.addPositionalArgument("destination", "Destination folder where you're saving the sprite sheet. Optional when using project file");
 
+    //!!!!!! Некоторые опции не работают из командной строки, только из файла проекта !!!!!!!
     parser.addOptions({
         {{"f", "format"}, "Format for export sprite sheet data. Default is cocos2d.", "format"},
         {"trimMode", "Rect - Removes the transparency around a sprite. The sprites appear to have their original size when using them.\n\
@@ -31,6 +33,9 @@ Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70
         {"scale", "Scales all images before creating the sheet. E.g. use 0.5 for half size, default is 1 (Scale has no effect when source is a project file).", "float", "1"},
         {"trimSpriteNames", "Remove image file extensions from the sprite names - e.g. .png, .jpg, ...", "bool", "false"},
         {"prependSmartFolderName", "Prepends the smart folder's name as part of the sprite name.", "bool", "false"},
+        {"rotateSprites", "Enable rotate sprites. (Only in project)", "bool", "false"},
+        {"error-if-not-fit", "Generate error if not fit in one texture", "bool", "false"},
+        {"verbose", "Verbose output", "bool", "false"}
     });
 
     parser.process(app);
@@ -67,8 +72,7 @@ Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70
         return -1;
     }
 
-    qDebug() << "arguments:" << parser.positionalArguments();
-    qDebug() << "options:" << parser.optionNames();
+    qDebug() << "arguments:" << parser.positionalArguments() << "options:" << parser.optionNames();
 
     QFileInfo source(parser.positionalArguments().at(0));
     QFileInfo destination;
@@ -87,13 +91,15 @@ Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70
     bool pow2 = false;
     bool forceSquared = false;
     bool heuristicMask = false;
-    int maxSize = 8192;
+    QSize maxSize(8192, 8192);
     float imageScale = 1;
     QString format = "cocos2d";
     QString pngOptMode = "None";
     int pngOptLevel = 0;
     bool trimSpriteNames = false;
     bool prependSmartFolderName = false;
+    bool rotateSprites = false;
+    bool error_if_not_fit = false;
 
     if (projectFile) {
         if (!projectFile->read(source.filePath())) {
@@ -109,6 +115,7 @@ Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70
             pngOptLevel = projectFile->pngOptLevel();
             trimSpriteNames = projectFile->trimSpriteNames();
             prependSmartFolderName = projectFile->prependSmartFolderName();
+            rotateSprites = projectFile->rotateSprites();
 
             if (!destinationSet) {
                 destination.setFile(projectFile->destPath());
@@ -148,7 +155,8 @@ Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70
         pow2 = true;
     }
     if (parser.isSet("max-size")) {
-        maxSize = parser.value("max-size").toInt();
+        int sz = parser.value("max-size").toInt();
+        maxSize = QSize(sz, sz);
     }
     if (parser.isSet("scale") && !projectFile) {
         imageScale = parser.value("scale").toFloat();
@@ -157,26 +165,38 @@ Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70
         format = parser.value("format");
     }
 
-     if (parser.isSet("png-opt-mode")) {
+    if (parser.isSet("png-opt-mode")) {
          pngOptMode = parser.value("png-opt-mode");
-     }
+    }
 
     if (parser.isSet("png-opt-level")) {
         pngOptLevel = parser.value("png-opt-level").toInt();
         pngOptLevel = qBound(1, pngOptLevel, 7);
     }
 
-    qDebug() << "trimMode:" << trimMode;
-    qDebug() << "algorithm:" << algorithm;
-    qDebug() << "trim:" << trim;
-    qDebug() << "epsilon:" << epsilon;
-    qDebug() << "textureBorder:" << textureBorder;
-    qDebug() << "spriteBorder:" << spriteBorder;
-    qDebug() << "pow2:" << pow2;
-    qDebug() << "maxSize:" << maxSize;
-    qDebug() << "scale:" << imageScale;
-    qDebug() << "png-opt-mode:" << pngOptMode;
-    qDebug() << "png-opt-level:" << pngOptLevel;
+    if (parser.isSet("error-if-not-fit")) {
+        error_if_not_fit = parser.value("error-if-not-fit").toInt() ? true : false;
+    }
+
+    if (parser.isSet("verbose")) {
+        verbose = parser.value("verbose").toInt() ? true : false;
+    }
+
+    if(verbose)
+    {
+        qDebug() << "trimMode:" << trimMode;
+        qDebug() << "algorithm:" << algorithm;
+        qDebug() << "trim:" << trim;
+        qDebug() << "epsilon:" << epsilon;
+        qDebug() << "textureBorder:" << textureBorder;
+        qDebug() << "spriteBorder:" << spriteBorder;
+        qDebug() << "pow2:" << pow2;
+        qDebug() << "maxSize:" << maxSize;
+        qDebug() << "scale:" << imageScale;
+        qDebug() << "png-opt-mode:" << pngOptMode;
+        qDebug() << "png-opt-level:" << pngOptLevel;
+        qDebug() << "rotateSprites:" << rotateSprites;
+    }
 
     // load formats
     QSettings settings;
@@ -197,7 +217,8 @@ Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70
             }
         }
     }
-    qDebug() << "Support Formats:" << PublishSpriteSheet::formats().keys();
+    if(verbose)
+        qDebug() << "Support Formats:" << PublishSpriteSheet::formats().keys();
 
     if (projectFile) {
         for (int i=0; i<projectFile->scalingVariants().size(); ++i) {
@@ -228,6 +249,8 @@ Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70
 
             // Generate sprite atlas
             SpriteAtlas atlas(QStringList() << projectFile->srcList(), textureBorder, spriteBorder, trim, heuristicMask, pow2, forceSquared, maxSize, scale);
+            atlas.setRotateSprites(rotateSprites);
+
             if (trimMode == "Polygon") {
                 atlas.enablePolygonMode(true, epsilon);
             }
@@ -235,7 +258,7 @@ Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70
              atlas.setAlgorithm(algorithm);
             }
             if (!atlas.generate()) {
-                qCritical() << "ERROR: Generate atlas!";
+                qCritical() << "ERROR: Generate atlas! :"  << source.filePath();
                 return -1;
             }
 
@@ -251,6 +274,7 @@ Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70
     } else {
         // Generate sprite atlas
         SpriteAtlas atlas(QStringList() << source.filePath(), textureBorder, spriteBorder, trim, heuristicMask, pow2, forceSquared, maxSize, imageScale);
+        atlas.setRotateSprites(rotateSprites);
         if (trimMode == "Polygon") {
             atlas.enablePolygonMode(true, epsilon);
         }
@@ -265,21 +289,28 @@ Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70
         publisher.addSpriteSheet(atlas, destination.filePath() + source.fileName());
     }
 
+    if(error_if_not_fit && publisher.notFitInOneTexture())
+    {
+        qCritical() << "ERROR: Multiple textures not available! :" << source.filePath();
+        return -1;
+    }
+
     publisher.setTrimSpriteNames(trimSpriteNames);
     publisher.setPrependSmartFolderName(prependSmartFolderName);
     publisher.setPngQuality(pngOptMode, pngOptLevel);
 
     if (!publisher.publish(format, false)) {
-        qCritical() << "ERROR: publish atlas!";
+        qCritical() << "ERROR: publish atlas!" << source.filePath();
         return -1;
     }
 
-    qDebug() << "Publishing is finished.";
+    if(verbose)
+        qDebug() << "Publishing is finished.";
 
 
 //    qDebug() << source.fileName() << source.isDir();
 //    qDebug() << destination.filePath() << destination.isDir();
 
-    return 1;
+    return 0;
 }
 

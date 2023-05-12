@@ -39,6 +39,8 @@ public:
 
     bool publish(const QString& format, bool errorMessage = true);
 
+    bool notFitInOneTexture() const;
+
     static void addFormat(const QString& format, const QString& scriptFileName) { _formats[format] = scriptFileName; }
     static QMap<QString, QString>& formats() { return _formats; }
 

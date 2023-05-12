@@ -119,6 +119,7 @@ macx {
 }
 
 win32 {
+    CONFIG += console
     RC_ICONS = SpritePacker.ico
 
     QMAKE_PRE_LINK += if not exist $$shell_quote($$shell_path($$DESTDIR/defaultFormats)) mkdir $$shell_quote($$shell_path($$DESTDIR/defaultFormats)) $$escape_expand(\\n\\t)

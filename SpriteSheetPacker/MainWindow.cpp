@@ -247,7 +247,7 @@ void MainWindow::refreshAtlas(bool generate) {
                                                     ui->heuristicMaskCheckBox->isChecked(),
                                                     pow2,
                                                     forceSquared,
-                                                    maxTextureSize,
+                                                    QSize(maxTextureSize, maxTextureSize),
                                                     scale);
 
                     atlas.setRotateSprites(ui->rotateSpritesCheckBox->isChecked());
@@ -375,7 +375,7 @@ void MainWindow::openSpritePackerProject(const QString& fileName) {
         ScalingVariantWidget* scalingVariantWidget = new ScalingVariantWidget(this,
                                                                               scalingVariant.name,
                                                                               scalingVariant.scale,
-                                                                              scalingVariant.maxTextureSize,
+                                                                              scalingVariant.maxTextureSize.width(),
                                                                               scalingVariant.pow2,
                                                                               scalingVariant.forceSquared);
         connect(scalingVariantWidget, SIGNAL(remove()), this, SLOT(onRemoveScalingVariant()));
@@ -446,7 +446,8 @@ void MainWindow::saveSpritePackerProject(const QString& fileName) {
             ScalingVariant scalingVariant;
             scalingVariant.name = scalingVariantWidget->name();
             scalingVariant.scale = scalingVariantWidget->scale();
-            scalingVariant.maxTextureSize = scalingVariantWidget->maxTextureSize();
+            int sz = scalingVariantWidget->maxTextureSize();
+            scalingVariant.maxTextureSize = QSize(sz, sz);
             scalingVariant.pow2 = scalingVariantWidget->pow2();
             scalingVariant.forceSquared = scalingVariantWidget->forceSquared();
             scalingVariants.push_back(scalingVariant);
@@ -706,9 +707,10 @@ void MainWindow::on_actionPublish_triggered() {
                                   ui->textureBorderSpinBox->value(),
                                   ui->spriteBorderSpinBox->value(),
                                   ui->trimSpinBox->value(),
+                                  ui->heuristicMaskCheckBox->isChecked(),
                                   pow2,
-                                  maxTextureSize,
                                   forceSquared,
+                                  QSize(maxTextureSize, maxTextureSize),
                                   scale);
 
                 atlas.setAlgorithm(ui->algorithmComboBox->currentText());
@@ -787,7 +789,7 @@ void MainWindow::on_actionCheckForUpdates_triggered() {
     });
 
     QUrl url = QUrl::fromEncoded("https://raw.githubusercontent.com/amakaseev/sprite-sheet-packer/master/CHANGELOG.md");
-    _networkManager.get(QNetworkRequest(url));
+    //_networkManager.get(QNetworkRequest(url));
 }
 
 void MainWindow::on_actionAbout_triggered() {

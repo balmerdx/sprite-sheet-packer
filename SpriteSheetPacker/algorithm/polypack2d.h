@@ -208,7 +208,7 @@ namespace PolyPack2D {
 
     template <class T> class Container: public std::vector<Content<T>> {
     public:
-        void place(const ContentList<T>& inputContent, int sizeLimit = 8192, int step = 5, std::function<void (int, int)> callback = NULL) {
+        void place(const ContentList<T>& inputContent, QSize sizeLimit = QSize(8192, 8192), int step = 5, std::function<void (int, int)> callback = NULL) {
             int contentIndex = 0;
             for (auto it = inputContent.begin(); it != inputContent.end(); ++it, ++contentIndex) {
                 auto content = (*it);
@@ -244,8 +244,8 @@ namespace PolyPack2D {
                             }
 //                            if (newBounds.width() > (newBounds.height()*2)) continue;
 //                            if (newBounds.height() > (newBounds.width()*2)) continue;
-                            if (newBounds.width() > sizeLimit) continue;
-                            if (newBounds.height() > sizeLimit) continue;
+                            if (newBounds.width() > sizeLimit.width()) continue;
+                            if (newBounds.height() > sizeLimit.height()) continue;
 
                             translateTriangles = false;
 

@@ -65,9 +65,14 @@ bool SpritePackerProjectFile::read(const QString &fileName) {
     for (int i=0; i<scalingVariants.size(); ++i) {
         QJsonObject scalingVariantObject = scalingVariants[i].toObject();
         ScalingVariant scalingVariant;
+        scalingVariant.maxTextureSize = QSize(2048, 2048);
+
         scalingVariant.name = scalingVariantObject["name"].toString();
         scalingVariant.scale = scalingVariantObject["scale"].toDouble();
-        scalingVariant.maxTextureSize = scalingVariantObject.contains("maxTextureSize")? scalingVariantObject["maxTextureSize"].toInt() : 2048;
+        if(scalingVariantObject.contains("maxTextureWidth"))
+            scalingVariant.maxTextureSize.setWidth(scalingVariantObject["maxTextureWidth"].toInt());
+        if(scalingVariantObject.contains("maxTextureHeight"))
+            scalingVariant.maxTextureSize.setHeight(scalingVariantObject["maxTextureHeight"].toInt());
         scalingVariant.pow2 = scalingVariantObject.contains("pow2")? scalingVariantObject["pow2"].toBool() : false;
         scalingVariant.forceSquared = scalingVariantObject.contains("forceSquared")? scalingVariantObject["forceSquared"].toBool() : false;
 
@@ -117,7 +122,8 @@ bool SpritePackerProjectFile::write(const QString &fileName) {
         QJsonObject scalingVariantObject;
         scalingVariantObject["name"] = scalingVariant.name;
         scalingVariantObject["scale"] = scalingVariant.scale;
-        scalingVariantObject["maxTextureSize"] = scalingVariant.maxTextureSize;
+        scalingVariantObject["maxTextureWidth"] = scalingVariant.maxTextureSize.width();
+        scalingVariantObject["maxTextureHeight"] = scalingVariant.maxTextureSize.height();
         scalingVariantObject["pow2"] = scalingVariant.pow2;
         scalingVariantObject["forceSquared"] = scalingVariant.forceSquared;
         scalingVariants.append(scalingVariantObject);
@@ -211,9 +217,10 @@ bool SpritePackerProjectFileTPS::read(const QString &fileName) {
         }
     }
 
-    int maxTextureSize = 2048;
+    QSize maxTextureSize(2048, 2048);
     if (tpsMap.find("maxTextureSize") != tpsMap.end()) {
-        maxTextureSize = qMax(tpsMap["maxTextureSize"].toMap()["width"].toInt(), tpsMap["maxTextureSize"].toMap()["height"].toInt());
+        maxTextureSize.setWidth(tpsMap["maxTextureSize"].toMap()["width"].toInt());
+        maxTextureSize.setHeight(tpsMap["maxTextureSize"].toMap()["height"].toInt());
     }
 
     bool pow2 = false;
@@ -262,11 +269,15 @@ bool SpritePackerProjectFileTPS::read(const QString &fileName) {
             scalingVariant.name = autoSDSetting["extension"].toString();
             scalingVariant.scale = autoSDSetting["scale"].toFloat() * globalScale;
 
-            scalingVariant.maxTextureSize = qMax(autoSDSetting["maxTextureSize"].toMap()["width"].toInt(),
-                                                 autoSDSetting["maxTextureSize"].toMap()["height"].toInt());
+            scalingVariant.maxTextureSize.setWidth(autoSDSetting["maxTextureSize"].toMap()["width"].toInt());
+            scalingVariant.maxTextureSize.setHeight(autoSDSetting["maxTextureSize"].toMap()["height"].toInt());
 
-            if (scalingVariant.maxTextureSize <= 0) {
-                scalingVariant.maxTextureSize = maxTextureSize;
+            if (scalingVariant.maxTextureSize.width() <= 0) {
+                scalingVariant.maxTextureSize.setWidth(maxTextureSize.width());
+            }
+
+            if (scalingVariant.maxTextureSize.height() <= 0) {
+                scalingVariant.maxTextureSize.setHeight(maxTextureSize.height());
             }
 
             scalingVariant.pow2 = pow2;

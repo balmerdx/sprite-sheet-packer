@@ -196,7 +196,8 @@ bool PublishSpriteSheet::publish(const QString& format, bool errorMessage) {
 
             // save image
             QString fileName = outputFilePath + imagePrefix(_imageFormat);
-            qDebug() << "Save image:" << fileName;
+            if(verbose)
+                qDebug() << "Save image:" << fileName;
             if ((_imageFormat == kPNG) || (_imageFormat == kWEBP) || (_imageFormat == kJPG) || (_imageFormat == kJPG_PNG)) {
                 QImage image = convertImage(outputData._atlasImage, _pixelFormat, _premultiplied);
                 if (_imageFormat == kPNG) {
@@ -355,7 +356,8 @@ bool PublishSpriteSheet::generateDataFile(const QString& filePath, const QString
     engine.globalObject().setProperty("console", consoleObj);
 
     // evaluate export plugin script
-    qDebug() << "Run script...";
+    if(verbose)
+        qDebug() << "Run script...";
     QJSValue result = engine.evaluate(contents);
     if (result.isError()) {
         QString errorString = "Uncaught exception at line " + result.property("lineNumber").toString() + " : " + result.toString();
@@ -474,4 +476,14 @@ void PublishSpriteSheet::optimizePNGInThread(QStringList fileNames, const QStrin
     }
 
     _watcher.setFuture(resultFuture);
+}
+
+bool PublishSpriteSheet::notFitInOneTexture() const
+{
+    for(const SpriteAtlas& atlas : _spriteAtlases)
+    {
+        if(atlas.outputData().size() > 1)
+            return true;
+    }
+    return false;
 }

@@ -8,7 +8,7 @@
 struct ScalingVariant{
     QString name;
     float   scale;
-    int     maxTextureSize;
+    QSize   maxTextureSize;
     bool    pow2;
     bool    forceSquared;
 };

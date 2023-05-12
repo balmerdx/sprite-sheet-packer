@@ -73,7 +73,8 @@ void PackContent::trim(int alpha) {
     }
 }
 
-SpriteAtlas::SpriteAtlas(const QStringList& sourceList, int textureBorder, int spriteBorder, int trim, bool heuristicMask, bool pow2, bool forceSquared, int maxSize, float scale)
+SpriteAtlas::SpriteAtlas(const QStringList& sourceList, int textureBorder, int spriteBorder, int trim, bool heuristicMask, bool pow2, bool forceSquared,
+                         QSize maxSize, float scale)
     : _sourceList(sourceList)
     , _trim(trim)
     , _textureBorder(textureBorder)
@@ -178,7 +179,8 @@ bool SpriteAtlas::generate(SpriteAtlasGenerateProgress* progress) {
             if (content.isIdentical(packContent)) {
                 findIdentical = true;
                 _identicalFrames[content.name()].push_back(packContent.name());
-                qDebug() << "isIdentical:" << packContent.name() << "==" << content.name();
+                if(verbose)
+                    qDebug() << "isIdentical:" << packContent.name() << "==" << content.name();
                 skipSprites++;
                 break;
             }
@@ -200,7 +202,8 @@ bool SpriteAtlas::generate(SpriteAtlasGenerateProgress* progress) {
     }
 
     int elapsed = timePerform.elapsed();
-    qDebug() << "Generate time mc:" <<  elapsed/1000.f << "sec";
+    if(verbose)
+        qDebug() << "Generate time mc:" <<  elapsed/1000.f << "sec";
 
     return result;
 }
@@ -231,8 +234,8 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
     BinPack2D::ContentAccumulator<PackContent> outputContent;
 
     // find optimal size for atlas
-    int w = qMin(_maxTextureSize, (int)sqrt(volume));
-    int h = qMin(_maxTextureSize, (int)sqrt(volume));
+    int w = qMin(_maxTextureSize.width(), (int)sqrt(volume));
+    int h = qMin(_maxTextureSize.height(), (int)sqrt(volume));
     if (_forceSquared) {
         h = w;
     }
@@ -253,7 +256,7 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
                 canvasArray.CollectContent(outputContent);
                 break;
             } else {
-                if ((w == _maxTextureSize) && (h == _maxTextureSize)) {
+                if ((w == _maxTextureSize.width()) && (h == _maxTextureSize.height())) {
                     qDebug() << "Max size Limit!";
                     //typedef BinPack2D::Content<PackContent>::Vector::iterator binpack2d_iterator;
                     QVector<PackContent> remainderContent;
@@ -278,15 +281,17 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
             }
             if (k || _forceSquared) {
                 k = false;
-                w = qMin(w*2, _maxTextureSize);
+                w = qMin(w*2, _maxTextureSize.width());
             } else {
                 k = true;
-                h = qMin(h*2, _maxTextureSize);
+                h = qMin(h*2, _maxTextureSize.height());
             }
             if (_forceSquared) {
                 h = w;
             }
-            qDebug() << "Resize for bigger:" << w << "x" << h;
+
+            if(verbose)
+                qDebug() << "Resize for bigger:" << w << "x" << h;
         }
         while (w > 2) {
             if (_aborted) return false;
@@ -308,7 +313,9 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
                 outputContent = BinPack2D::ContentAccumulator<PackContent>();
                 canvasArray.CollectContent(outputContent);
             }
-            qDebug() << "Optimize width:" << w << "x" << h;
+
+            if(verbose)
+                qDebug() << "Optimize width:" << w << "x" << h;
         }
         if (!_forceSquared) {
             while (h > 2) {
@@ -325,11 +332,14 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
                     outputContent = BinPack2D::ContentAccumulator<PackContent>();
                     canvasArray.CollectContent(outputContent);
                 }
-                qDebug() << "Optimize height:" << w << "x" << h;
+
+                if(verbose)
+                    qDebug() << "Optimize height:" << w << "x" << h;
             }
         }
     } else {
-        qDebug() << "Volume size:" << w << "x" << h;
+        if(verbose)
+            qDebug() << "Volume size:" << w << "x" << h;
         bool k = true;
         int step = qMax((w + h) / 20, 1);
         while (1) {
@@ -343,7 +353,7 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
                 canvasArray.CollectContent(outputContent);
                 break;
             } else {
-                if ((w == _maxTextureSize) && (h == _maxTextureSize)) {
+                if ((w == _maxTextureSize.width()) && (h == _maxTextureSize.height())) {
                     qDebug() << "Max size Limit!";
                     //typedef BinPack2D::Content<PackContent>::Vector::iterator binpack2d_iterator;
                     QVector<PackContent> remainderContent;
@@ -368,16 +378,17 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
             }
             if (k || _forceSquared) {
                 k = false;
-                w = qMin(w + step, _maxTextureSize);
+                w = qMin(w + step, _maxTextureSize.width());
             } else {
                 k = true;
-                h = qMin(h + step, _maxTextureSize);;
+                h = qMin(h + step, _maxTextureSize.height());
             }
             if (_forceSquared) {
                 h = w;
             }
 
-            qDebug() << "Resize for bigger:" << w << "x" << h << "step:" << step;
+            if(verbose)
+                qDebug() << "Resize for bigger:" << w << "x" << h << "step:" << step;
         }
         step = qMax((w + h) / 20, 1);
         while (w) {
@@ -400,7 +411,9 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
                 outputContent = BinPack2D::ContentAccumulator<PackContent>();
                 canvasArray.CollectContent(outputContent);
             }
-            qDebug() << "Optimize width:" << w << "x" << h << "step:" << step;
+
+            if(verbose)
+                qDebug() << "Optimize width:" << w << "x" << h << "step:" << step;
         }
         if (!_forceSquared) {
             step = qMax((w + h) / 20, 1);
@@ -418,12 +431,15 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
                     outputContent = BinPack2D::ContentAccumulator<PackContent>();
                     canvasArray.CollectContent(outputContent);
                 }
-                qDebug() << "Optimize height:" << w << "x" << h << "step:" << step;
+
+                if(verbose)
+                    qDebug() << "Optimize height:" << w << "x" << h << "step:" << step;
             }
         }
     }
 
-    qDebug() << "Found optimize size:" << w << "x" << h;
+    if(verbose)
+        qDebug() << "Found optimize size:" << w << "x" << h;
     if (_progress)
         _progress->setProgressText(QString("Found optimize size: %1x%2").arg(w).arg(h));
 
