@@ -239,6 +239,13 @@ namespace BinPack2D {
             return rotated;
         }
 
+        void setRotate(bool new_rotated)
+        {
+            if(rotated == new_rotated)
+                return;
+            Rotate();
+        }
+
         bool intersects(const Content<_T> &that) const {
 
             if(this->coord.x >= (that.coord.x + that.size.w))

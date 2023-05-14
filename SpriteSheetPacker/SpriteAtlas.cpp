@@ -85,11 +85,7 @@ SpriteAtlas::SpriteAtlas(const QStringList& sourceList, int textureBorder, int s
     , _maxTextureSize(maxSize)
     , _scale(scale)
 {
-    _algorithm = "Rect";
-    _rotateSprites = false;
     _polygonMode.enable = false;
-
-    _aborted = false;
 }
 
 void SpriteAtlas::enablePolygonMode(bool enable, float epsilon) {
@@ -120,13 +116,15 @@ bool SpriteAtlas::generate(SpriteAtlasGenerateProgress* progress) {
         QFileInfo fi(pathName);
 
         if (fi.isDir()) {
-            QDir dir(fi.path());
+            QDir dir(pathName);
             QDirIterator fileNames(pathName, nameFilter, QDir::Files | QDir::NoSymLinks | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
             while(fileNames.hasNext()){
                 if (_aborted) return false;
 
                 fileNames.next();
-                fileList.push_back(qMakePair(fileNames.filePath(), dir.relativeFilePath(fileNames.filePath())));
+                QString filePath = fileNames.filePath();
+                QString relativePath = dir.relativeFilePath(filePath);
+                fileList.push_back(qMakePair(fileNames.filePath(), relativePath));
             }
         } else {
             fileList.push_back(qMakePair(pathName, fi.fileName()));
@@ -173,20 +171,23 @@ bool SpriteAtlas::generate(SpriteAtlasGenerateProgress* progress) {
             }
         }
 
-        // Find Identical
-        bool findIdentical = false;
-        for (auto& content: inputContent) {
-            if (content.isIdentical(packContent)) {
-                findIdentical = true;
-                _identicalFrames[content.name()].push_back(packContent.name());
-                if(verbose)
-                    qDebug() << "isIdentical:" << packContent.name() << "==" << content.name();
-                skipSprites++;
-                break;
+        if(_enableFindIdentical)
+        {
+            // Find Identical
+            bool findIdentical = false;
+            for (auto& content: inputContent) {
+                if (content.isIdentical(packContent)) {
+                    findIdentical = true;
+                    _identicalFrames[content.name()].push_back(packContent.name());
+                    if(verbose)
+                        qDebug() << "isIdentical:" << packContent.name() << "==" << content.name();
+                    skipSprites++;
+                    break;
+                }
             }
-        }
-        if (findIdentical) {
-            continue;
+            if (findIdentical) {
+                continue;
+            }
         }
 
         inputContent.push_back(packContent);
@@ -206,6 +207,38 @@ bool SpriteAtlas::generate(SpriteAtlasGenerateProgress* progress) {
         qDebug() << "Generate time mc:" <<  elapsed/1000.f << "sec";
 
     return result;
+}
+
+static bool tryPermutation(BinPack2D::ContentAccumulator<PackContent>& inputContent, BinPack2D::ContentAccumulator<PackContent>& outputContent, int w, int h,
+                           BinPack2D::ContentAccumulator<PackContent>& remainder)
+{
+    //У нас максимально большие размеры текстуры. Попробуем первые самые большие спрайты вращать, может это поможет.
+    bool success = false;
+    uint32_t rotate_count = qMin((uint32_t)inputContent.Get().size(), (uint32_t)4);
+    uint32_t rotate_exp2 = 1 << rotate_count;
+    for(uint32_t try_idx = 1; try_idx < rotate_exp2; try_idx++)
+    {
+        for(uint32_t i = 0; i < rotate_count; i++)
+        {
+            if(!inputContent.Get()[i].tryRotate)
+                return false;
+            inputContent.Get()[i].setRotate((try_idx & (1<<i))?true:false);
+        }
+
+        qDebug() << "try_idx=" << try_idx;
+
+        BinPack2D::CanvasArray<PackContent> canvasArray = BinPack2D::UniformCanvasArrayBuilder<PackContent>(w, h, 1).Build();
+        success = canvasArray.Place(inputContent, remainder);
+        if(success)
+        {
+            qDebug() << "try_idx success!!!!";
+            outputContent = BinPack2D::ContentAccumulator<PackContent>();
+            canvasArray.CollectContent(outputContent);
+            break;
+        }
+    }
+
+    return success;
 }
 
 bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
@@ -355,6 +388,11 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
             } else {
                 if ((w == _maxTextureSize.width()) && (h == _maxTextureSize.height())) {
                     qDebug() << "Max size Limit!";
+
+                    if(tryPermutation(inputContent, outputContent, w - _textureBorder*2, h - _textureBorder*2,
+                                      remainder))
+                        break;
+
                     //typedef BinPack2D::Content<PackContent>::Vector::iterator binpack2d_iterator;
                     QVector<PackContent> remainderContent;
                     for (auto itor = remainder.Get().begin(); itor != remainder.Get().end(); itor++ ) {
@@ -367,6 +405,12 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
                     }
                     qDebug() << "content:" << content.size();
                     qDebug() << "remainderContent:" << remainderContent.size();
+
+                    if(outputContent.Get().size()==0)
+                    {
+                        //One element dont fit in texture limit!
+                        return false;
+                    }
 
                     outputContent = BinPack2D::ContentAccumulator<PackContent>();
                     canvasArray.CollectContent(outputContent);
@@ -462,7 +506,8 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
         QImage image;
         if (content.rotated) {
             image = packContent.image().copy(packContent.rect());
-            image = rotate90(image);
+            //Breaking changes!!! rotate 270 istead rotate 90
+            image = rotate270(image);
         }
 
         SpriteFrameInfo spriteFrame;
@@ -475,8 +520,8 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
                         );
         } else {
             spriteFrame.offset = QPoint(
-                        (packContent.rect().left() + (-packContent.image().width() + content.size.w - _spriteBorder) * 0.5f),
-                        (-packContent.rect().top() + ( packContent.image().height() - content.size.h + _spriteBorder) * 0.5f)
+                        (packContent.rect().left() + (-image.width() + content.size.w - _spriteBorder) * 0.5f),
+                        (-packContent.rect().top() + ( image.height() - content.size.h + _spriteBorder) * 0.5f)
                         );
         }
         spriteFrame.rotated = content.rotated;

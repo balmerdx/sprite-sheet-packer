@@ -12,7 +12,7 @@ function exportSpriteSheet(dataFilePath, imageFilePath, spriteFrames, textureSiz
     for(var key in spriteFrames)
     {
         var spriteFrame = spriteFrames[key];
-        contents += key + "\n";
+        contents += removeExtension(key) + "\n";
         contents += "  rotate: " + spriteFrame.rotated + "\n";
         contents += "  xy: " + spriteFrame.frame.x + ", " + spriteFrame.frame.y + "\n";
         contents += "  size: " + spriteFrame.frame.width + ", " + spriteFrame.frame.height + "\n";
@@ -32,4 +32,9 @@ function exportSpriteSheet(dataFilePath, imageFilePath, spriteFrames, textureSiz
 function getFileName(str)
 {
     return str.split('\\').pop().split('/').pop();
+}
+
+function removeExtension(filename)
+{
+    return filename.substring(0, filename.lastIndexOf('.')) || filename;
 }

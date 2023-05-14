@@ -80,13 +80,24 @@ bool SpritePackerProjectFile::read(const QString &fileName) {
     }
 
     if (json.contains("dataFormat"))  _dataFormat = json["dataFormat"].toString();
-    if (json.contains("destPath")) _destPath = QDir(dir.absoluteFilePath(json["destPath"].toString())).canonicalPath();
+    if (json.contains("destPath"))
+    {
+        _destPath = json["destPath"].toString();
+        _destPath = QDir(_destPath).absolutePath();
+    }
     if (json.contains("spriteSheetName")) _spriteSheetName = json["spriteSheetName"].toString();
 
     _srcList.clear();
     QJsonArray srcRelative = json["srcList"].toArray();
     for (auto src: srcRelative) {
-        _srcList.push_back(dir.absoluteFilePath(src.toString()));
+        QString in = src.toString();
+        if(in.isEmpty() || in == ".")
+        {
+            _srcList.push_back(dir.absolutePath());
+            continue;
+        }
+
+        _srcList.push_back(dir.absoluteFilePath(in));
     }
 
     if (json.contains("trimSpriteNames")) _trimSpriteNames = json["trimSpriteNames"].toBool();

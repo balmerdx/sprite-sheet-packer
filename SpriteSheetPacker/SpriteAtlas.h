@@ -86,6 +86,8 @@ public:
     QString algorithm() const { return _algorithm; }
     float scale() const { return _scale; }
 
+    void enableFindIdentical(bool enable) { _enableFindIdentical = enable; }
+
     const QVector<OutputData>& outputData() const { return _outputData; }
     const QMap<QString, QVector<QString>>& identicalFrames() const { return _identicalFrames; }
 
@@ -94,10 +96,9 @@ protected:
     bool packWithPolygon(const QVector<PackContent>& content);
 
     void onPlaceCallback(int current, int count);
-
 private:
     QStringList _sourceList;
-    QString _algorithm;
+    QString _algorithm = "Rect";
     int _trim;
     int _textureBorder;
     int _spriteBorder;
@@ -106,7 +107,8 @@ private:
     bool _forceSquared;
     QSize _maxTextureSize;
     float _scale;
-    bool _rotateSprites;
+    bool _rotateSprites = false;
+    bool _enableFindIdentical = true;
     // polygon mode
     struct TPolygonMode{
         bool enable;
@@ -119,7 +121,7 @@ private:
     QVector<OutputData> _outputData;
     QMap<QString, QVector<QString>> _identicalFrames;
 
-    bool _aborted;
+    bool _aborted = false;
 };
 
 extern bool verbose;

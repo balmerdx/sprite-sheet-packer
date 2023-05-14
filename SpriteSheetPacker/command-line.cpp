@@ -15,9 +15,9 @@ int commandLine(QCoreApplication& app) {
     //!!!!!! Некоторые опции не работают из командной строки, только из файла проекта !!!!!!!
     parser.addOptions({
         {{"f", "format"}, "Format for export sprite sheet data. Default is cocos2d.", "format"},
-        {"trimMode", "Rect - Removes the transparency around a sprite. The sprites appear to have their original size when using them.\n\
-Polygon - The amount of rendered transparency can be reduced by creating a tight fitting polygon around the solid pixels of a sprite. But: The vertices must be transformed by the CPU — introducing new costs.\n\
-Default is Rect", "mode", "Rect"},
+        {"trimMode", "Rect - Removes the transparency around a sprite. The sprites appear to have their original size when using them.\n"
+         "Polygon - The amount of rendered transparency can be reduced by creating a tight fitting polygon around the solid pixels of a sprite. But: The vertices must be transformed by the CPU — introducing new costs.\n"
+         "Default is Rect", "mode", "Rect"},
         {"algorithm", "Rect or Polygon. Default is Rect", "mode", "Rect"},
         {"trim", "Allowed values: 1 to 255, default is 1. Pixels with an alpha value below this value will be considered transparent when trimming the sprite. Very useful for sprites with nearly invisible alpha pixels at the borders.", "int", "1"},
         {"epsilon", "Lower values create a tighter fitting mesh with less transparency but with more vertices.\nHigher values on the other hand reduce the number of vertices at the cost of adding more transparency.", "float", "5"},
@@ -25,17 +25,19 @@ Default is Rect", "mode", "Rect"},
         {"sprite-border", "Sprite border is the space between sprites. Value adds transparent pixels between sprites to avoid artifacts from neighbor sprites. The transparent pixels are not added to the sprites, default is 2.", "int", "2"},
         {"powerOf2", "Forces the texture to have power of 2 size (32, 64, 128...). Default is disable."},
         {"max-size", "Sets the maximum size for the texture, default is 8192.", "size", "8192"},
-        {"png-opt-mode", "Optimizes the png's file size.\n\
-None - No optimization at all(fastest).\n\
-Lossless - Uses optipng to optimize the filesize. The reduction is mostly small but doesn't harm image quality.\n\
-Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70%, but the image quality gets a bit worse.", "int", "0"},
+        {"png-opt-mode", "Optimizes the png's file size.\n"
+         "None - No optimization at all(fastest).\n"
+         "Lossless - Uses optipng to optimize the filesize. The reduction is mostly small but doesn't harm image quality.\n"
+         "Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70%, but the image quality gets a bit worse.", "int", "0"},
         {"png-opt-level", "Optimizes the image's file size. Only useful in combination with opt-mode Lossless. Allowed values: 1 to 7 (Using a high value might take some time to optimize.", "int", "0"},
         {"scale", "Scales all images before creating the sheet. E.g. use 0.5 for half size, default is 1 (Scale has no effect when source is a project file).", "float", "1"},
         {"trimSpriteNames", "Remove image file extensions from the sprite names - e.g. .png, .jpg, ...", "bool", "false"},
         {"prependSmartFolderName", "Prepends the smart folder's name as part of the sprite name.", "bool", "false"},
         {"rotateSprites", "Enable rotate sprites. (Only in project)", "bool", "false"},
-        {"error-if-not-fit", "Generate error if not fit in one texture", "bool", "false"},
-        {"verbose", "Verbose output", "bool", "false"}
+        {"error-if-not-fit", "Generate error if not fit in one texture (default 0)", "bool", "0"},
+        {"verbose", "Verbose output (default 0)", "bool", "0"},
+        {"enable-find-identical", "Enable find identical sprite (default 1)", "bool", "1"}
+
     });
 
     parser.process(app);
@@ -75,10 +77,10 @@ Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70
     qDebug() << "arguments:" << parser.positionalArguments() << "options:" << parser.optionNames();
 
     QFileInfo source(parser.positionalArguments().at(0));
-    QFileInfo destination;
+    QDir destination;
 
     if (destinationSet) {
-        destination.setFile(parser.positionalArguments().at(1));
+        destination = QDir(parser.positionalArguments().at(1));
     }
 
     // initialize [options]
@@ -99,7 +101,8 @@ Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70
     bool trimSpriteNames = false;
     bool prependSmartFolderName = false;
     bool rotateSprites = false;
-    bool error_if_not_fit = false;
+    bool enableFindIdentical = true;
+    bool errorIfNotFit = false;
 
     if (projectFile) {
         if (!projectFile->read(source.filePath())) {
@@ -118,18 +121,17 @@ Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70
             rotateSprites = projectFile->rotateSprites();
 
             if (!destinationSet) {
-                destination.setFile(projectFile->destPath());
+                destination = QDir(projectFile->destPath());
             }
         }
     }
 
-    if (!destination.filePath().endsWith("/")) {
-        destination.setFile(destination.filePath() + "/");
-    }
-
-    if (!destination.isDir()) {
-        qDebug() << "Incorrect destination folder";
-        return -1;
+    if (!destination.exists()) {
+        if(!destination.mkpath(destination.path()))
+        {
+            qDebug() << "Incorrect destination folder" << destination;
+            return -1;
+        }
     }
 
     // you can override project file options
@@ -137,7 +139,7 @@ Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70
         trimMode = parser.value("trimMode");
     }
     if (parser.isSet("algorithm")) {
-     algorithm = parser.value("algorithm");
+        algorithm = parser.value("algorithm");
     }
     if (parser.isSet("trim")) {
         trim = parser.value("trim").toInt();
@@ -174,8 +176,12 @@ Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70
         pngOptLevel = qBound(1, pngOptLevel, 7);
     }
 
+    if (parser.isSet("enable-find-identical")) {
+        enableFindIdentical = parser.value("enable-find-identical").toInt() ? true : false;
+    }
+
     if (parser.isSet("error-if-not-fit")) {
-        error_if_not_fit = parser.value("error-if-not-fit").toInt() ? true : false;
+        errorIfNotFit = parser.value("error-if-not-fit").toInt() ? true : false;
     }
 
     if (parser.isSet("verbose")) {
@@ -196,6 +202,7 @@ Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70
         qDebug() << "png-opt-mode:" << pngOptMode;
         qDebug() << "png-opt-level:" << pngOptLevel;
         qDebug() << "rotateSprites:" << rotateSprites;
+        qDebug() << "destination=" << destination;
     }
 
     // load formats
@@ -235,27 +242,22 @@ Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70
                 spriteSheetName = variantName + spriteSheetName;
             }
             while (spriteSheetName.at(0) == '/') {
-                spriteSheetName.remove(0,1);
+                spriteSheetName.remove(0, 1);
             }
 
             QFileInfo destFileInfo;
-            destFileInfo.setFile(destination.dir(), spriteSheetName);
-            if (destination.absolutePath() != destFileInfo.dir().absolutePath()) {
-                if (!destination.dir().mkpath(destFileInfo.dir().absolutePath())) {
-                    qWarning() << "Imposible create path:" + destFileInfo.dir().absolutePath();
-                    continue;
-                }
-            }
+            destFileInfo = destination.absoluteFilePath(spriteSheetName);
 
             // Generate sprite atlas
             SpriteAtlas atlas(QStringList() << projectFile->srcList(), textureBorder, spriteBorder, trim, heuristicMask, pow2, forceSquared, maxSize, scale);
             atlas.setRotateSprites(rotateSprites);
+            atlas.enableFindIdentical(enableFindIdentical);
 
             if (trimMode == "Polygon") {
                 atlas.enablePolygonMode(true, epsilon);
             }
             if (algorithm == "Polygon") {
-             atlas.setAlgorithm(algorithm);
+                atlas.setAlgorithm(algorithm);
             }
             if (!atlas.generate()) {
                 qCritical() << "ERROR: Generate atlas! :"  << source.filePath();
@@ -275,6 +277,7 @@ Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70
         // Generate sprite atlas
         SpriteAtlas atlas(QStringList() << source.filePath(), textureBorder, spriteBorder, trim, heuristicMask, pow2, forceSquared, maxSize, imageScale);
         atlas.setRotateSprites(rotateSprites);
+        atlas.enableFindIdentical(enableFindIdentical);
         if (trimMode == "Polygon") {
             atlas.enablePolygonMode(true, epsilon);
         }
@@ -286,10 +289,10 @@ Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70
             return -1;
         }
 
-        publisher.addSpriteSheet(atlas, destination.filePath() + source.fileName());
+        publisher.addSpriteSheet(atlas, destination.absoluteFilePath(source.fileName()));
     }
 
-    if(error_if_not_fit && publisher.notFitInOneTexture())
+    if(errorIfNotFit && publisher.notFitInOneTexture())
     {
         qCritical() << "ERROR: Multiple textures not available! :" << source.filePath();
         return -1;
@@ -306,10 +309,6 @@ Lossy - Uses pngquant to optimize the filesize. The reduction is mostly about 70
 
     if(verbose)
         qDebug() << "Publishing is finished.";
-
-
-//    qDebug() << source.fileName() << source.isDir();
-//    qDebug() << destination.filePath() << destination.isDir();
 
     return 0;
 }
