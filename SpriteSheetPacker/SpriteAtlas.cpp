@@ -519,9 +519,12 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
                         packContent.rect().top()
                         );
         } else {
+            QSize imageSize = content.rotated
+                    ? QSize(packContent.image().height(), packContent.image().width())
+                    : QSize(packContent.image().width(), packContent.image().height());
             spriteFrame.offset = QPoint(
-                        (packContent.rect().left() + (-image.width() + content.size.w - _spriteBorder) * 0.5f),
-                        (-packContent.rect().top() + ( image.height() - content.size.h + _spriteBorder) * 0.5f)
+                        (packContent.rect().left() + (-imageSize.width() + content.size.w - _spriteBorder) * 0.5f),
+                        (-packContent.rect().top() + ( imageSize.height() - content.size.h + _spriteBorder) * 0.5f)
                         );
         }
         spriteFrame.rotated = content.rotated;
