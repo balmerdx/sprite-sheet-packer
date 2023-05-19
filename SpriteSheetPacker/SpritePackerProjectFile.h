@@ -36,6 +36,8 @@ public:
 
     void setRotateSprites(bool rotate) { _rotateSprites = rotate; }
     bool rotateSprites() { return _rotateSprites; }
+    bool rotateSpritesCw() { return rotateSpritesCwStatic(_dataFormat); }
+    static bool rotateSpritesCwStatic(const QString& dataFormat);
 
     void setTextureBorder(int textureBorder) { _textureBorder = textureBorder; }
     int textureBorder() const { return _textureBorder; }

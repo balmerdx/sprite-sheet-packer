@@ -250,7 +250,7 @@ int commandLine(QCoreApplication& app) {
 
             // Generate sprite atlas
             SpriteAtlas atlas(QStringList() << projectFile->srcList(), textureBorder, spriteBorder, trim, heuristicMask, pow2, forceSquared, maxSize, scale);
-            atlas.setRotateSprites(rotateSprites);
+            atlas.setRotateSprites(rotateSprites, projectFile->rotateSpritesCw());
             atlas.enableFindIdentical(enableFindIdentical);
 
             if (trimMode == "Polygon") {
@@ -276,7 +276,8 @@ int commandLine(QCoreApplication& app) {
     } else {
         // Generate sprite atlas
         SpriteAtlas atlas(QStringList() << source.filePath(), textureBorder, spriteBorder, trim, heuristicMask, pow2, forceSquared, maxSize, imageScale);
-        atlas.setRotateSprites(rotateSprites);
+        //!!Возможно вращение в неверную сторону!!
+        atlas.setRotateSprites(rotateSprites, true);
         atlas.enableFindIdentical(enableFindIdentical);
         if (trimMode == "Polygon") {
             atlas.enablePolygonMode(true, epsilon);

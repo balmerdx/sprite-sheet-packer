@@ -250,7 +250,8 @@ void MainWindow::refreshAtlas(bool generate) {
                                                     QSize(maxTextureSize, maxTextureSize),
                                                     scale);
 
-                    atlas.setRotateSprites(ui->rotateSpritesCheckBox->isChecked());
+                    atlas.setRotateSprites(ui->rotateSpritesCheckBox->isChecked(),
+                                           SpritePackerProjectFile::rotateSpritesCwStatic(ui->dataFormatComboBox->currentText()));
                     atlas.setAlgorithm(ui->algorithmComboBox->currentText());
 
                     if (ui->trimModeComboBox->currentText() == "Polygon") {

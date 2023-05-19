@@ -307,3 +307,10 @@ bool SpritePackerProjectFileTPS::read(const QString &fileName) {
 
     return true;
 }
+
+bool SpritePackerProjectFile::rotateSpritesCwStatic(const QString& dataFormat)
+{
+    if(dataFormat == "spine-atlas")
+        return false;
+    return true;
+}

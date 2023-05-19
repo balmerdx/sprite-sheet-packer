@@ -78,7 +78,8 @@ public:
     void setAlgorithm(const QString& algorithm) { _algorithm = algorithm; }
     void enablePolygonMode(bool enable, float epsilon = 2.f);
 
-    void setRotateSprites(bool value) { _rotateSprites = value; }
+    //rotateCw = True - вращать спрайт по часовой стрелке.
+    void setRotateSprites(bool value, bool rotateCw) { _rotateSprites = value; _rotateSpritesCw = rotateCw; }
 
     bool generate(SpriteAtlasGenerateProgress* progress = nullptr);
     void abortGeneration() { _aborted = true; }
@@ -108,6 +109,7 @@ private:
     QSize _maxTextureSize;
     float _scale;
     bool _rotateSprites = false;
+    bool _rotateSpritesCw = true;
     bool _enableFindIdentical = true;
     // polygon mode
     struct TPolygonMode{

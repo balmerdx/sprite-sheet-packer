@@ -507,7 +507,10 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
         if (content.rotated) {
             image = packContent.image().copy(packContent.rect());
             //Breaking changes!!! rotate 270 istead rotate 90
-            image = rotate270(image);
+            if(_rotateSpritesCw)
+                image = rotate90(image);
+            else
+                image = rotate270(image);
         }
 
         SpriteFrameInfo spriteFrame;
