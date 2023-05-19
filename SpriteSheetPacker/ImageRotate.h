@@ -42,7 +42,7 @@ QImage rotate(int degrees, const QImage &src) {
 QImage rotate90(const QImage &src) {
     QImage dst(src.height(), src.width(), src.format());
     for (int y=0;y<src.height();++y) {
-        const uint *srcLine = reinterpret_cast< const uint * >(src.scanLine(y));
+        const uint *srcLine = reinterpret_cast< const uint * >(src.constScanLine(y));
         for (int x=0;x<src.width();++x) {
             dst.setPixel(src.height()-y-1, x, srcLine[x]);
         }
@@ -52,7 +52,7 @@ QImage rotate90(const QImage &src) {
 QImage rotate180(const QImage &src) {
     QImage dst(src.width(), src.height(), src.format());
     for (int y=0;y<src.height();++y) {
-        const uint *srcLine = reinterpret_cast< const uint * >(src.scanLine(y));
+        const uint *srcLine = reinterpret_cast< const uint * >(src.constScanLine(y));
         for (int x=0;x<src.width();++x) {
             dst.setPixel(src.width()-x-1, src.height()-y-1, srcLine[x]);
         }
@@ -62,7 +62,7 @@ QImage rotate180(const QImage &src) {
 QImage rotate270(const QImage &src) {
     QImage dst(src.height(), src.width(), src.format());
     for (int y=0;y<src.height();++y) {
-        const uint *srcLine = reinterpret_cast< const uint * >(src.scanLine(y));
+        const uint *srcLine = reinterpret_cast< const uint * >(src.constScanLine(y));
         for (int x=0;x<src.width();++x) {
             dst.setPixel(y, src.width()-x-1, srcLine[x]);
         }

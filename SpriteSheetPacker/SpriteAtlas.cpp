@@ -21,7 +21,10 @@ PackContent::PackContent() {
 }
 PackContent::PackContent(const QString& name, const QImage& image) {
     _name = name;
-    _image = image;
+    if(image.format() != QImage::Format_RGBA8888)
+        _image = image.convertToFormat(QImage::Format_RGBA8888);
+    else
+        _image = image;
     _rect = QRect(0, 0, _image.width(), _image.height());
 }
 
