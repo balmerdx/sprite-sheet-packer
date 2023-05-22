@@ -203,9 +203,12 @@ bool PublishSpriteSheet::publish(const QString& format, bool errorMessage) {
                 if (_imageFormat == kPNG) {
                     QImageWriter writer(outputFilePath + imagePrefix(kPNG), "png");
                     writer.setOptimizedWrite(true);
-                    writer.setCompression(100);
+                    writer.setCompression(_pngQuality.optLevel * 10);
                     writer.setQuality(0);
+                    //QTime start = QTime::currentTime();
                     writer.write(image);
+                    //QTime finish = QTime::currentTime();
+                    //qDebug() << "Save png time:" << start.msecsTo(finish) << "ms";
                 } else if (_imageFormat == kWEBP) {
                     QImageWriter writer(outputFilePath + imagePrefix(kWEBP), "webp");
                     writer.setOptimizedWrite(true);

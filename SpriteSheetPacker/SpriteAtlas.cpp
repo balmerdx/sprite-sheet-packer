@@ -21,8 +21,9 @@ PackContent::PackContent() {
 }
 PackContent::PackContent(const QString& name, const QImage& image) {
     _name = name;
-    if(image.format() != QImage::Format_RGBA8888)
-        _image = image.convertToFormat(QImage::Format_RGBA8888);
+    auto format = image.format();
+    if(image.format() != QImage::Format_ARGB32)
+        _image = image.convertToFormat(QImage::Format_ARGB32);
     else
         _image = image;
     _rect = QRect(0, 0, _image.width(), _image.height());
@@ -509,7 +510,6 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
         QImage image;
         if (content.rotated) {
             image = packContent.image().copy(packContent.rect());
-            //Breaking changes!!! rotate 270 istead rotate 90
             if(_rotateSpritesCw)
                 image = rotate90(image);
             else
@@ -541,7 +541,7 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
 
         }
         if (content.rotated) {
-            painter.drawImage(QPoint(content.coord.x + _textureBorder, content.coord.y + _textureBorder), image);
+            painter.drawImage(QPoint(content.coord.x + _textureBorder, content.coord.y  + _textureBorder), image);
         } else {
             painter.drawImage(QPoint(content.coord.x + _textureBorder, content.coord.y + _textureBorder), packContent.image(), packContent.rect());
         }
