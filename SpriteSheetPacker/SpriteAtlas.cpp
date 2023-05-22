@@ -5,6 +5,7 @@
 #include "polypack2d.h"
 #include "ImageRotate.h"
 #include "PolygonImage.h"
+#include "ImageFillOuter.h"
 
 int pow2(int len) {
     int order = 1;
@@ -491,8 +492,9 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
     if (_progress)
         _progress->setProgressText(QString("Found optimize size: %1x%2").arg(w).arg(h));
 
-    OutputData outputData;
+    std::vector<QRect> paintedRects;
 
+    OutputData outputData;
     // parse output.
     outputData._atlasImage = QImage(w, h, QImage::Format_RGBA8888);
     outputData._atlasImage.fill(QColor(0, 0, 0, 0));
@@ -537,14 +539,20 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
         spriteFrame.sourceColorRect = packContent.rect();
         spriteFrame.sourceSize = packContent.image().size();
         if (content.rotated) {
-            spriteFrame.frame = QRect(content.coord.x, content.coord.y, content.size.h-_spriteBorder, content.size.w-_spriteBorder);
+            spriteFrame.frame = QRect(content.coord.x, content.coord.y, content.size.h - _spriteBorder, content.size.w - _spriteBorder);
+        }
 
-        }
+        QPoint imagePos(content.coord.x + _textureBorder, content.coord.y  + _textureBorder);
+        QSize imageSize;
         if (content.rotated) {
-            painter.drawImage(QPoint(content.coord.x + _textureBorder, content.coord.y  + _textureBorder), image);
+            imageSize = image.size();
+            painter.drawImage(imagePos, image);
         } else {
-            painter.drawImage(QPoint(content.coord.x + _textureBorder, content.coord.y + _textureBorder), packContent.image(), packContent.rect());
+            imageSize = packContent.rect().size();
+            painter.drawImage(imagePos, packContent.image(), packContent.rect());
         }
+
+        paintedRects.push_back(QRect(imagePos, imageSize));
 
         outputData._spriteFrames[packContent.name()] = spriteFrame;
 
@@ -559,8 +567,24 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
             }
         }
     }
-
     painter.end();
+
+    {
+        /*
+           Чтобы не ломать старое поведение, оставляем как было.
+           _spriteBorder = 1 - это бордюр только справа-снизу (и он не заполняется).
+           Если требйется бордюр со всех сторон шириной в 1 пиксель, то надо выставить _spriteBorder = 2.
+           Предполагаем, что у текстур выставлен clamp, поэтому по границе слева-сверху бордюра не будет, и это нормально.
+        */
+        int border = _spriteBorder / 2;
+        if(border > 0)
+        for(QRect sprite_size : paintedRects)
+        {
+            fillOuter(outputData._atlasImage, sprite_size, border);
+        }
+    }
+
+
     _outputData.push_front(outputData);
 
     return true;

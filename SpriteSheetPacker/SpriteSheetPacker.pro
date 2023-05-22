@@ -29,6 +29,7 @@ CONFIG(release,debug|release) {
 INCLUDEPATH += 3rdparty
 
 SOURCES += main.cpp\
+    ImageFillOuter.cpp \
     MainWindow.cpp \
     SpriteAtlas.cpp \
     ScalingVariantWidget.cpp \
@@ -50,6 +51,7 @@ SOURCES += main.cpp\
     ElapsedTimer.cpp
 
 HEADERS += MainWindow.h \
+    ImageFillOuter.h \
     ImageRotate.h \
     SpriteAtlas.h \
     ScalingVariantWidget.h \
