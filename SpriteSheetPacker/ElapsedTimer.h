@@ -2,6 +2,7 @@
 #define ELAPSEDTIMER_H
 
 #include <QtCore>
+#include <chrono>
 
 class ElapsedTimer: public QTimer
 {
@@ -18,7 +19,7 @@ signals:
     void timeout(int elapsed);
 
 private:
-    QTime _time;
+    std::chrono::high_resolution_clock::time_point init_time_point;
 };
 
 

@@ -17,7 +17,7 @@ void ZoomGraphicsView::wheelEvent(QWheelEvent *event) {
 #endif
         setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
 
-        if (event->delta() > 0) {
+        if (event->angleDelta().y() > 0) {
             emit zoomed(true);
         } else {
             emit zoomed(false);

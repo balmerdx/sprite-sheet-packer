@@ -3,21 +3,22 @@
 ElapsedTimer::ElapsedTimer(QObject* parent): QTimer(parent) {
     connect(this, &QTimer::timeout, [this](){
         emit timeout(elapsed());
-        _time.restart();
+        init_time_point = std::chrono::high_resolution_clock::now();
     });
 }
 
 void ElapsedTimer::start() {
-    _time.start();
+    init_time_point = std::chrono::high_resolution_clock::now();
     QTimer::start();
 }
 
 void ElapsedTimer::start(int msec) {
-    _time.start();
+    init_time_point = std::chrono::high_resolution_clock::now();
     QTimer::start(msec);
 }
 
 int ElapsedTimer::elapsed() {
-    return _time.elapsed();
+    auto elapsed_time = std::chrono::high_resolution_clock::now() - init_time_point;
+    return std::chrono::duration_cast<std::chrono::microseconds>(elapsed_time).count();;
 }
 

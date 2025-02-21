@@ -25,6 +25,7 @@
 
 #include <QPointF>
 #include <QDebug>
+#include <QSize>
 #include <math.h>
 #include <functional>
 

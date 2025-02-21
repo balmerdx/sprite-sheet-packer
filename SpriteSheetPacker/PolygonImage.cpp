@@ -40,7 +40,7 @@ PolygonImage::PolygonImage(const QImage& image, const QRectF& rect, const float 
             }
 
             // erase contour for find next
-            QPolygonF fillPolygon(QVector<QPointF>::fromStdVector(polyPoint));
+            QPolygonF fillPolygon(polyPoint.begin(), polyPoint.end());
             fillPolygon.translate(rect.x(), rect.y());
             QColor fillColor(0, 0, 0, 0);
             QPen pen(fillColor);
@@ -86,7 +86,7 @@ PolygonImage::PolygonImage(const QImage& image, const QRectF& rect, const float 
         }
 
         // erase contour for find next
-        QPolygonF fillPolygon(QVector<QPointF>::fromStdVector(p));
+        QPolygonF fillPolygon(p.begin(), p.end());
         fillPolygon.translate(rect.x(), rect.y());
         QColor fillColor(0, 0, 0, 0);
         QPen pen(fillColor);

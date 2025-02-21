@@ -474,8 +474,11 @@ void PublishSpriteSheet::optimizePNGInThread(QStringList fileNames, const QStrin
 
     QFuture<bool> resultFuture;
 
+    //[Balmer] Bad logic, wait unly last resultFuture
     for (const QString& fileName : fileNames) {
-        resultFuture = QtConcurrent::run(this, &PublishSpriteSheet::optimizePNG, fileName, optMode, optLevel);
+        resultFuture = QtConcurrent::run([this, fileName, optMode, optLevel]() {
+            return optimizePNG(fileName, optMode, optLevel);
+        });
     }
 
     _watcher.setFuture(resultFuture);

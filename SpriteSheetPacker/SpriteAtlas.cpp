@@ -6,6 +6,7 @@
 #include "ImageRotate.h"
 #include "PolygonImage.h"
 #include "ImageFillOuter.h"
+#include "ElapsedTimer.h"
 
 int pow2(int len) {
     int order = 1;
@@ -22,7 +23,7 @@ PackContent::PackContent() {
 }
 PackContent::PackContent(const QString& name, const QImage& image) {
     _name = name;
-    auto format = image.format();
+    //auto format = image.format();
     if(image.format() != QImage::Format_ARGB32)
         _image = image.convertToFormat(QImage::Format_ARGB32);
     else
@@ -101,7 +102,7 @@ void SpriteAtlas::enablePolygonMode(bool enable, float epsilon) {
 bool SpriteAtlas::generate(SpriteAtlasGenerateProgress* progress) {
     _aborted = false;
 
-    QTime timePerform;
+    ElapsedTimer timePerform(nullptr);
     timePerform.start();
 
     _outputData.clear();
@@ -630,7 +631,10 @@ bool SpriteAtlas::packWithPolygon(const QVector<PackContent>& content) {
         for (auto vert: packContent.triangles().verts) {
             triangles.verts.push_back(PolyPack2D::Point(vert.x(), vert.y()));
         }
-        triangles.indices = packContent.triangles().indices.toStdVector();
+        //triangles.indices = packContent.triangles().indices.toStdVector();
+        triangles.indices.clear();
+        triangles.indices.insert(triangles.indices.end(), packContent.triangles().indices.begin(), packContent.triangles().indices.end());
+
         inputContent += PolyPack2D::Content<PackContent>(packContent, triangles, _spriteBorder);
     }
 
@@ -674,7 +678,7 @@ bool SpriteAtlas::packWithPolygon(const QVector<PackContent>& content) {
 
         QPainterPath clipPath;
         for (auto polygon: packContent.polygons()) {
-            clipPath.addPolygon(QPolygonF(QVector<QPointF>::fromStdVector(polygon)));
+            clipPath.addPolygon(QPolygonF(polygon.begin(), polygon.end()));
         }
         clipPath.translate(content.bounds().left + _textureBorder, content.bounds().top + _textureBorder);
         painter.setClipPath(clipPath);
