@@ -9,6 +9,7 @@ struct ScalingVariant{
     QString name;
     float   scale;
     QSize   maxTextureSize;
+    QSize   fixedTextureSize;//If not zero,  then this dimension is fixed
     bool    pow2;
     bool    forceSquared;
 };
@@ -90,6 +91,8 @@ public:
     void setEncryptionKey(const QString& key) { _encryptionKey = key; }
     const QString& encryptionKey() { return _encryptionKey; }
 
+    QSize granularity() const { return _granularity; }
+
     virtual bool write(const QString& fileName);
     virtual bool read(const QString& fileName);
 
@@ -126,6 +129,7 @@ protected:
     bool        _prependSmartFolderName;
     QString     _encryptionKey;
 
+    QSize _granularity = QSize(1,1);
 private:
     static GenericObjectFactory<std::string, SpritePackerProjectFile> _factory;
 };

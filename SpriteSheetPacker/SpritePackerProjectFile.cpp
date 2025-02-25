@@ -73,6 +73,17 @@ bool SpritePackerProjectFile::read(const QString &fileName) {
             scalingVariant.maxTextureSize.setWidth(scalingVariantObject["maxTextureWidth"].toInt());
         if(scalingVariantObject.contains("maxTextureHeight"))
             scalingVariant.maxTextureSize.setHeight(scalingVariantObject["maxTextureHeight"].toInt());
+        if(scalingVariantObject.contains("fixedTextureWidth"))
+        {
+            scalingVariant.fixedTextureSize.setWidth(scalingVariantObject["fixedTextureWidth"].toInt());
+            scalingVariant.maxTextureSize.setWidth(scalingVariant.fixedTextureSize.width());
+        }
+        if(scalingVariantObject.contains("fixedTextureHeight"))
+        {
+            scalingVariant.fixedTextureSize.setHeight(scalingVariantObject["fixedTextureHeight"].toInt());
+            scalingVariant.maxTextureSize.setHeight(scalingVariant.fixedTextureSize.height());
+        }
+
         scalingVariant.pow2 = scalingVariantObject.contains("pow2")? scalingVariantObject["pow2"].toBool() : false;
         scalingVariant.forceSquared = scalingVariantObject.contains("forceSquared")? scalingVariantObject["forceSquared"].toBool() : false;
 
@@ -104,6 +115,9 @@ bool SpritePackerProjectFile::read(const QString &fileName) {
     if (json.contains("prependSmartFolderName")) _prependSmartFolderName = json["prependSmartFolderName"].toBool();
 
     if (json.contains("encryptionKey")) _encryptionKey = json["encryptionKey"].toString();
+
+    if (json.contains("granularityX")) _granularity.setWidth(json["granularityX"].toInt());
+    if (json.contains("granularityY")) _granularity.setHeight(json["granularityY"].toInt());
 
     return true;
 }

@@ -36,8 +36,9 @@ int commandLine(QCoreApplication& app) {
         {"rotateSprites", "Enable rotate sprites. (Only in project)", "bool", "false"},
         {"error-if-not-fit", "Generate error if not fit in one texture (default 0)", "bool", "0"},
         {"verbose", "Verbose output (default 0)", "bool", "0"},
-        {"enable-find-identical", "Enable find identical sprite (default 1)", "bool", "1"}
-
+        {"enable-find-identical", "Enable find identical sprite (default 1)", "bool", "1"},
+        {"granularityX", "Set granularity x (default 1)", "int", "1"},
+        {"granularityY", "Set granularity y (default 1)", "int", "1"},
     });
 
     parser.process(app);
@@ -51,6 +52,13 @@ int commandLine(QCoreApplication& app) {
         return -1;
     } else if ((parser.positionalArguments().size() == 1) || (parser.positionalArguments().size() == 2)) {
         QFileInfo src(parser.positionalArguments().at(0));
+        if(!src.exists())
+        {
+            qDebug() << "File not found.";
+            qDebug() << "Filename:" << parser.positionalArguments().at(0);
+            return -1;
+        }
+
         if (!src.isDir()) {
             std::string suffix = src.suffix().toStdString();
             projectFile = SpritePackerProjectFile::factory().get(suffix)();
@@ -74,7 +82,8 @@ int commandLine(QCoreApplication& app) {
         return -1;
     }
 
-    qDebug() << "arguments:" << parser.positionalArguments() << "options:" << parser.optionNames();
+    if(verbose)
+        qDebug() << "arguments:" << parser.positionalArguments() << "options:" << parser.optionNames();
 
     QFileInfo source(parser.positionalArguments().at(0));
     QDir destination;
@@ -103,6 +112,7 @@ int commandLine(QCoreApplication& app) {
     bool rotateSprites = false;
     bool enableFindIdentical = true;
     bool errorIfNotFit = false;
+    QSize granularity(1, 1);
 
     if (projectFile) {
         if (!projectFile->read(source.filePath())) {
@@ -119,6 +129,7 @@ int commandLine(QCoreApplication& app) {
             trimSpriteNames = projectFile->trimSpriteNames();
             prependSmartFolderName = projectFile->prependSmartFolderName();
             rotateSprites = projectFile->rotateSprites();
+            granularity = projectFile->granularity();
 
             if (!destinationSet) {
                 destination = QDir(projectFile->destPath());
@@ -188,6 +199,36 @@ int commandLine(QCoreApplication& app) {
         verbose = parser.value("verbose").toInt() ? true : false;
     }
 
+
+    if (parser.isSet("granularityX")) {
+        granularity.setWidth(parser.value("granularityX").toInt());
+    }
+
+    if (parser.isSet("granularityY")) {
+        granularity.setHeight(parser.value("granularityY").toInt());
+    }
+
+    if (granularity.width() != 1 || granularity.height() != 1)
+    {
+        if (textureBorder != 0 )
+        {
+            qDebug() << "Granularity in settings require textureBorder=0";
+            return -1;
+        }
+
+        if (trim != 0 )
+        {
+            qDebug() << "Granularity in settings require trim=0";
+            return -1;
+        }
+
+        if (rotateSprites)
+        {
+            qDebug() << "Granularity in settings require rotateSprites=false";
+            return -1;
+        }
+    }
+
     if(verbose)
     {
         qDebug() << "trimMode:" << trimMode;
@@ -202,14 +243,20 @@ int commandLine(QCoreApplication& app) {
         qDebug() << "png-opt-mode:" << pngOptMode;
         qDebug() << "png-opt-level:" << pngOptLevel;
         qDebug() << "rotateSprites:" << rotateSprites;
-        qDebug() << "destination=" << destination;
+        qDebug() << "destination:" << destination;
+        qDebug() << "granularity:" << granularity;
     }
 
     // load formats
     QSettings settings;
     QStringList formatsFolder;
     formatsFolder.push_back(QCoreApplication::applicationDirPath() + "/defaultFormats");
-    formatsFolder.push_back(settings.value("Preferences/customFormatFolder").toString());
+
+    {
+        auto custom = settings.value("Preferences/customFormatFolder").toString();
+        if (!custom.isEmpty())
+            formatsFolder.push_back(custom);
+    }
 
     PublishSpriteSheet publisher;
 
@@ -248,7 +295,8 @@ int commandLine(QCoreApplication& app) {
             QFileInfo destFileInfo(destination.absoluteFilePath(spriteSheetName));
 
             // Generate sprite atlas
-            SpriteAtlas atlas(QStringList() << projectFile->srcList(), textureBorder, spriteBorder, trim, heuristicMask, pow2, forceSquared, maxSize, scale);
+            SpriteAtlas atlas(QStringList() << projectFile->srcList(), textureBorder, spriteBorder, trim, heuristicMask, pow2,
+                              forceSquared, maxSize, scale, granularity, variant.fixedTextureSize);
             atlas.setRotateSprites(rotateSprites, projectFile->rotateSpritesCw());
             atlas.enableFindIdentical(enableFindIdentical);
 
@@ -274,7 +322,8 @@ int commandLine(QCoreApplication& app) {
         projectFile = nullptr;
     } else {
         // Generate sprite atlas
-        SpriteAtlas atlas(QStringList() << source.filePath(), textureBorder, spriteBorder, trim, heuristicMask, pow2, forceSquared, maxSize, imageScale);
+        SpriteAtlas atlas(QStringList() << source.filePath(), textureBorder, spriteBorder, trim, heuristicMask, pow2,
+                          forceSquared, maxSize, imageScale, granularity);
         //!!Возможно вращение в неверную сторону!!
         atlas.setRotateSprites(rotateSprites, true);
         atlas.enableFindIdentical(enableFindIdentical);
@@ -312,4 +361,3 @@ int commandLine(QCoreApplication& app) {
 
     return 0;
 }
-

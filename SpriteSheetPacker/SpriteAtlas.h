@@ -65,6 +65,15 @@ public:
     };
 
 public:
+    /*
+       granularity - размер гранул теустуры.
+       для RGBA текстур он равен (1,1), для ASTC4x4 он будет (4,4)
+       Размещает спрайты так, что-бы они не пересекались в блоках granularity
+       Это позволяет в ASTC4x4 копировать спрайты поотдельночти из одной текстуры в другую.
+       В текущий момент реализовано только для rect упаковки.
+
+       Предполагаем, что textureBorder=0, trim = 0, иначе кривовато работать будет
+    */
     SpriteAtlas(const QStringList& sourceList = QStringList(),
                 int textureBorder = 0,
                 int spriteBorder = 1,
@@ -73,7 +82,10 @@ public:
                 bool pow2 = false,
                 bool forceSquared = false,
                 QSize maxSize = QSize(8192, 8192),
-                float scale = 1);
+                float scale = 1,
+                QSize granularity = QSize(1,1),
+                QSize fixedTextureSize = QSize(0,0)
+                );
 
     void setAlgorithm(const QString& algorithm) { _algorithm = algorithm; }
     void enablePolygonMode(bool enable, float epsilon = 2.f);
@@ -97,6 +109,15 @@ protected:
     bool packWithPolygon(const QVector<PackContent>& content);
 
     void onPlaceCallback(int current, int count);
+
+    int GranularityDivSizeX(int sx) { int gx = _granularity.width(); return (sx + gx - 1) / gx; }
+    int GranularityDivSizeY(int sy) { int gy = _granularity.height(); return (sy + gy - 1) / gy; }
+
+    int GranularityMulPosX(int x) { return x * _granularity.width(); }
+    int GranularityMulPosY(int y) { return y * _granularity.height(); }
+
+    int GranularityRoundUpX(int sx) { int gx = _granularity.width(); return (sx + gx - 1) / gx * gx; }
+    int GranularityRoundUpY(int sy) { int gy = _granularity.height(); return (sy + gy - 1) / gy * gy; }
 private:
     QStringList _sourceList;
     QString _algorithm = "Rect";
@@ -107,6 +128,7 @@ private:
     bool _pow2;
     bool _forceSquared;
     QSize _maxTextureSize;
+    QSize _fixedTextureSize;
     float _scale;
     bool _rotateSprites = false;
     bool _rotateSpritesCw = true;
@@ -124,6 +146,8 @@ private:
     QMap<QString, QVector<QString>> _identicalFrames;
 
     bool _aborted = false;
+
+    QSize _granularity = QSize(1,1);
 };
 
 extern bool verbose;

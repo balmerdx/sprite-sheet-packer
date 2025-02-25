@@ -196,6 +196,7 @@ bool PublishSpriteSheet::publish(const QString& format, bool errorMessage) {
 
             // save image
             QString fileName = outputFilePath + imagePrefix(_imageFormat);
+            QFile(fileName).remove();
             if(verbose)
                 qDebug() << "Save image:" << fileName;
             if ((_imageFormat == kPNG) || (_imageFormat == kWEBP) || (_imageFormat == kJPG) || (_imageFormat == kJPG_PNG)) {

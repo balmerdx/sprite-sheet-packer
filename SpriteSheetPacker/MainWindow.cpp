@@ -120,6 +120,10 @@ MainWindow::MainWindow(QWidget *parent) :
     // remove entries from sprite list with the DELETE key
     QShortcut* shortcut = new QShortcut(QKeySequence(Qt::Key_Delete), _spritesTreeWidget);
     connect(shortcut, SIGNAL(activated()), this, SLOT(on_actionRemove_triggered()));
+
+    QObject::connect(ui->jpgQualitySlider, &QSlider::valueChanged, [this](int v) { ui->jpgQualityText->setNum(v); });
+    QObject::connect(ui->pngOptLevelSlider, &QSlider::valueChanged, [this](int v) { ui->pngOptLevelText->setNum(v); });
+    QObject::connect(ui->webpQualitySlider, &QSlider::valueChanged, [this](int v) { ui->jpgQualityText_2->setNum(v); });
 }
 
 MainWindow::~MainWindow() {

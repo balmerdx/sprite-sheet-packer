@@ -80,7 +80,7 @@ void PackContent::trim(int alpha) {
 }
 
 SpriteAtlas::SpriteAtlas(const QStringList& sourceList, int textureBorder, int spriteBorder, int trim, bool heuristicMask, bool pow2, bool forceSquared,
-                         QSize maxSize, float scale)
+                         QSize maxSize, float scale, QSize granularity, QSize fixedTextureSize)
     : _sourceList(sourceList)
     , _trim(trim)
     , _textureBorder(textureBorder)
@@ -89,7 +89,9 @@ SpriteAtlas::SpriteAtlas(const QStringList& sourceList, int textureBorder, int s
     , _pow2(pow2)
     , _forceSquared(forceSquared)
     , _maxTextureSize(maxSize)
+    , _fixedTextureSize(fixedTextureSize)
     , _scale(scale)
+    , _granularity(granularity)
 {
     _polygonMode.enable = false;
 }
@@ -254,13 +256,13 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
     int volume = 0;
     BinPack2D::ContentAccumulator<PackContent> inputContent;
     for (auto packContent: content) {
-        int width = packContent.rect().width();
-        int height = packContent.rect().height();
+        int width = GranularityDivSizeX(packContent.rect().width() + _spriteBorder);
+        int height = GranularityDivSizeY(packContent.rect().height() + _spriteBorder);
         volume += width * height * 1.02f;
 
         inputContent += BinPack2D::Content<PackContent>(packContent,
                                                         BinPack2D::Coord(),
-                                                        BinPack2D::Size(width + _spriteBorder, height + _spriteBorder),
+                                                        BinPack2D::Size(width, height),
                                                         _rotateSprites,
                                                         false);
     }
@@ -272,9 +274,20 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
     BinPack2D::ContentAccumulator<PackContent> remainder;
     BinPack2D::ContentAccumulator<PackContent> outputContent;
 
+    auto makeTexSizeG = [this](int w, int h) -> QSize
+    {
+        return QSize(GranularityDivSizeX(w - _textureBorder*2), GranularityDivSizeY(h - _textureBorder*2));
+    };
+
     // find optimal size for atlas
     int w = qMin(_maxTextureSize.width(), (int)sqrt(volume));
     int h = qMin(_maxTextureSize.height(), (int)sqrt(volume));
+
+    if (_fixedTextureSize.width() > 0)
+        w = _fixedTextureSize.width();
+    if (_fixedTextureSize.height() > 0)
+        h = _fixedTextureSize.height();
+
     if (_forceSquared) {
         h = w;
     }
@@ -287,7 +300,9 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
         while (1) {
             if (_aborted) return false;
 
-            BinPack2D::CanvasArray<PackContent> canvasArray = BinPack2D::UniformCanvasArrayBuilder<PackContent>(w - _textureBorder*2, h - _textureBorder*2, 1).Build();
+            auto texSizeG = makeTexSizeG(w, h);
+            BinPack2D::CanvasArray<PackContent> canvasArray = BinPack2D::UniformCanvasArrayBuilder<PackContent>(
+                                                                  texSizeG.width(), texSizeG.height(), 1).Build();
 
             bool success = canvasArray.Place(inputContent, remainder);
             if (success) {
@@ -339,7 +354,9 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
             if (_forceSquared) {
                 h = w;
             }
-            BinPack2D::CanvasArray<PackContent> canvasArray = BinPack2D::UniformCanvasArrayBuilder<PackContent>(w - _textureBorder*2, h - _textureBorder*2, 1).Build();
+            auto texSizeG = makeTexSizeG(w, h);
+            BinPack2D::CanvasArray<PackContent> canvasArray = BinPack2D::UniformCanvasArrayBuilder<PackContent>(
+                                                                  texSizeG.width(), texSizeG.height(), 1).Build();
 
             bool success = canvasArray.Place(inputContent, remainder);
             if (!success) {
@@ -361,7 +378,9 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
                 if (_aborted) return false;
 
                 h = h/2;
-                BinPack2D::CanvasArray<PackContent> canvasArray = BinPack2D::UniformCanvasArrayBuilder<PackContent>(w - _textureBorder*2, h - _textureBorder*2, 1).Build();
+                auto texSizeG = makeTexSizeG(w, h);
+                BinPack2D::CanvasArray<PackContent> canvasArray = BinPack2D::UniformCanvasArrayBuilder<PackContent>(
+                                                                      texSizeG.width(), texSizeG.height(), 1).Build();
 
                 bool success = canvasArray.Place(inputContent, remainder);
                 if (!success) {
@@ -384,7 +403,9 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
         while (1) {
             if (_aborted) return false;
 
-            BinPack2D::CanvasArray<PackContent> canvasArray = BinPack2D::UniformCanvasArrayBuilder<PackContent>(w - _textureBorder*2, h - _textureBorder*2, 1).Build();
+            auto texSizeG = makeTexSizeG(w, h);
+            BinPack2D::CanvasArray<PackContent> canvasArray = BinPack2D::UniformCanvasArrayBuilder<PackContent>(
+                                                                  texSizeG.width(), texSizeG.height(), 1).Build();
 
             bool success = canvasArray.Place(inputContent, remainder);
             if (success) {
@@ -395,7 +416,7 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
                 if ((w == _maxTextureSize.width()) && (h == _maxTextureSize.height())) {
                     qDebug() << "Max size Limit!";
 
-                    if(tryPermutation(inputContent, outputContent, w - _textureBorder*2, h - _textureBorder*2,
+                    if(tryPermutation(inputContent, outputContent, texSizeG.width(), texSizeG.height(),
                                       remainder))
                         break;
 
@@ -448,7 +469,9 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
             if (_forceSquared) {
                 h = w;
             }
-            BinPack2D::CanvasArray<PackContent> canvasArray = BinPack2D::UniformCanvasArrayBuilder<PackContent>(w - _textureBorder*2, h - _textureBorder*2, 1).Build();
+            auto texSizeG = makeTexSizeG(w, h);
+            BinPack2D::CanvasArray<PackContent> canvasArray = BinPack2D::UniformCanvasArrayBuilder<PackContent>(
+                                                                  texSizeG.width(), texSizeG.height(), 1).Build();
 
             bool success = canvasArray.Place(inputContent, remainder);
             if (!success) {
@@ -471,7 +494,9 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
                 if (_aborted) return false;
 
                 h -= step;
-                BinPack2D::CanvasArray<PackContent> canvasArray = BinPack2D::UniformCanvasArrayBuilder<PackContent>(w - _textureBorder*2, h - _textureBorder*2, 1).Build();
+                auto texSizeG = makeTexSizeG(w, h);
+                BinPack2D::CanvasArray<PackContent> canvasArray = BinPack2D::UniformCanvasArrayBuilder<PackContent>(
+                                                                      texSizeG.width(), texSizeG.height(), 1).Build();
 
                 bool success = canvasArray.Place(inputContent, remainder);
                 if (!success) {
@@ -492,6 +517,9 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
         qDebug() << "Found optimize size:" << w << "x" << h;
     if (_progress)
         _progress->setProgressText(QString("Found optimize size: %1x%2").arg(w).arg(h));
+
+    w = GranularityRoundUpX(w);
+    h = GranularityRoundUpY(h);
 
     std::vector<QRect> paintedRects;
 
@@ -521,7 +549,9 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
 
         SpriteFrameInfo spriteFrame;
         spriteFrame.triangles = packContent.triangles();
-        spriteFrame.frame = QRect(content.coord.x + _textureBorder, content.coord.y + _textureBorder, content.size.w - _spriteBorder, content.size.h - _spriteBorder);
+        spriteFrame.frame = QRect(GranularityMulPosX(content.coord.x + _textureBorder),
+                                  GranularityMulPosY(content.coord.y + _textureBorder),
+                                  packContent.rect().width(), packContent.rect().height());
         if (spriteFrame.triangles.indices.size()) {
             spriteFrame.offset = QPoint(
                         packContent.rect().left(),
@@ -568,10 +598,12 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
         spriteFrame.sourceColorRect = packContent.rect();
         spriteFrame.sourceSize = packContent.image().size();
         if (content.rotated) {
-            spriteFrame.frame = QRect(content.coord.x, content.coord.y, content.size.h - _spriteBorder, content.size.w - _spriteBorder);
+            spriteFrame.frame = QRect(GranularityMulPosX(content.coord.x),
+                                      GranularityMulPosY(content.coord.y),
+                                      packContent.rect().height(), packContent.rect().width());
         }
 
-        QPoint imagePos(content.coord.x + _textureBorder, content.coord.y  + _textureBorder);
+        QPoint imagePos = spriteFrame.frame.topLeft();
         QSize imageSize;
         if (content.rotated) {
             imageSize = image.size();
@@ -602,7 +634,7 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
         /*
            Чтобы не ломать старое поведение, оставляем как было.
            _spriteBorder = 1 - это бордюр только справа-снизу (и он не заполняется).
-           Если требйется бордюр со всех сторон шириной в 1 пиксель, то надо выставить _spriteBorder = 2.
+           Если требуется бордюр со всех сторон шириной в 1 пиксель, то надо выставить _spriteBorder = 2.
            Предполагаем, что у текстур выставлен clamp, поэтому по границе слева-сверху бордюра не будет, и это нормально.
         */
         int border = _spriteBorder / 2;

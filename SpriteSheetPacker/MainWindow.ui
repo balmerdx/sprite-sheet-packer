@@ -194,7 +194,7 @@
      <x>0</x>
      <y>0</y>
      <width>1328</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <property name="defaultUp">
@@ -306,8 +306,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>320</width>
-          <height>763</height>
+          <width>303</width>
+          <height>772</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -1319,54 +1319,5 @@
  <resources>
   <include location="resources.qrc"/>
  </resources>
- <connections>
-  <connection>
-   <sender>jpgQualitySlider</sender>
-   <signal>valueChanged(int)</signal>
-   <receiver>jpgQualityText</receiver>
-   <slot>setNum(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>270</x>
-     <y>714</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>295</x>
-     <y>714</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>pngOptLevelSlider</sender>
-   <signal>valueChanged(int)</signal>
-   <receiver>pngOptLevelText</receiver>
-   <slot>setNum(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>279</x>
-     <y>750</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>295</x>
-     <y>750</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>webpQualitySlider</sender>
-   <signal>valueChanged(int)</signal>
-   <receiver>jpgQualityText_2</receiver>
-   <slot>setNum(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>214</x>
-     <y>704</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>284</x>
-     <y>705</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
 </ui>

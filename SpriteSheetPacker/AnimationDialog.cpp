@@ -31,6 +31,8 @@ AnimationDialog::AnimationDialog(SpritesTreeWidget* spritesTreeWidget, QWidget *
 
     ui->splitter->setStretchFactor(0, 0);
     ui->splitter->setStretchFactor(1, 1);
+
+    QObject::connect(ui->framesSlider, &QSlider::valueChanged, [this](int v) { ui->label->setNum(v);});
 }
 
 AnimationDialog::~AnimationDialog() {
