@@ -20,8 +20,8 @@ function exportSpriteSheet(dataFilePath, imageFilePath, spriteFrames, textureSiz
         cocosFrame["aliases"] = [];
 
         cocosFrame["spriteSize"] = "{" +
-                spriteFrame.frame.width + "," +
-                spriteFrame.frame.height + "}";
+                spriteFrame.sourceColorRect.width + "," +
+                spriteFrame.sourceColorRect.height + "}";
 
         cocosFrame["spriteOffset"] = "{" +
                 spriteFrame.offset.x + "," +

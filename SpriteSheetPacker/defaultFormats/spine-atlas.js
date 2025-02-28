@@ -15,7 +15,7 @@ function exportSpriteSheet(dataFilePath, imageFilePath, spriteFrames, textureSiz
         contents += removeExtension(key) + "\n";
         contents += "  rotate: " + spriteFrame.rotated + "\n";
         contents += "  xy: " + spriteFrame.frame.x + ", " + spriteFrame.frame.y + "\n";
-        contents += "  size: " + spriteFrame.frame.width + ", " + spriteFrame.frame.height + "\n";
+        contents += "  size: " + spriteFrame.sourceColorRect.width + ", " + spriteFrame.sourceColorRect.height + "\n";
         contents += "  orig: " + spriteFrame.sourceSize.width + ", " + spriteFrame.sourceSize.height + "\n";
         contents += "  offset: " + spriteFrame.offset.x + ", " + spriteFrame.offset.y + "\n";
         contents += "  index: -1\n";

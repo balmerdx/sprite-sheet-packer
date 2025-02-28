@@ -461,7 +461,9 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
             if(verbose)
                 qDebug() << "Resize for bigger:" << w << "x" << h << "step:" << step;
         }
+
         step = qMax((w + h) / 20, 1);
+        if (_fixedTextureSize.width() <= 0)
         while (w) {
             if (_aborted) return false;
 
@@ -488,6 +490,8 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
             if(verbose)
                 qDebug() << "Optimize width:" << w << "x" << h << "step:" << step;
         }
+
+        if (_fixedTextureSize.height() <= 0)
         if (!_forceSquared) {
             step = qMax((w + h) / 20, 1);
             while (h) {
