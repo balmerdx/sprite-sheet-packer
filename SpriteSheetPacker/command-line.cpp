@@ -117,6 +117,7 @@ int commandLine(QCoreApplication& app) {
     if (projectFile) {
         if (!projectFile->read(source.filePath())) {
             qCritical() << "File format error.";
+            return -1;
         } else {
             trimMode = projectFile->trimMode();
             algorithm = projectFile->algorithm();

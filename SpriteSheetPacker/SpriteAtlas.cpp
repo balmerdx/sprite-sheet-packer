@@ -563,6 +563,9 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
                         );
         } else {
             QSize imageSize = QSize(packContent.image().width(), packContent.image().height());
+            auto content_w = packContent.rect().width();
+            auto content_h = packContent.rect().height();
+
             if(content.rotated)
             {
                 //По хорошему _rotateSpritesCw надо заменить на тип формата, но пока пускай так будет
@@ -570,15 +573,15 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
                 {
                     //cocos2d format
                     spriteFrame.offset = QPoint(
-                                (packContent.rect().left() + (-imageSize.width() + content.size.h - _spriteBorder) * 0.5f),
-                                (-packContent.rect().top() + ( imageSize.height() - content.size.w + _spriteBorder) * 0.5f)
+                                (packContent.rect().left() + (-imageSize.width() + content_h) * 0.5f),
+                                (-packContent.rect().top() + ( imageSize.height() - content_w) * 0.5f)
                                 );
                 } else
                 {
                     //libGDX / spine-atlas format
                     spriteFrame.offset = QPoint(
-                                (packContent.rect().left() + (-imageSize.width() + content.size.h - _spriteBorder)),
-                                (-packContent.rect().top() + ( imageSize.height() - content.size.w + _spriteBorder))
+                                (packContent.rect().left() + (-imageSize.width() + content_h)),
+                                (-packContent.rect().top() + ( imageSize.height() - content_w))
                                 );
                 }
             } else
@@ -586,14 +589,14 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
                 if(_rotateSpritesCw)
                 {
                     spriteFrame.offset = QPoint(
-                                (packContent.rect().left() + (-imageSize.width() + content.size.w - _spriteBorder) * 0.5f),
-                                (-packContent.rect().top() + ( imageSize.height() - content.size.h + _spriteBorder) * 0.5f)
+                                (packContent.rect().left() + (-imageSize.width() + content_w) * 0.5f),
+                                (-packContent.rect().top() + ( imageSize.height() - content_h) * 0.5f)
                                 );
                 } else
                 {
                     spriteFrame.offset = QPoint(
-                                (packContent.rect().left() + (-imageSize.width() + content.size.w - _spriteBorder)),
-                                (-packContent.rect().top() + ( imageSize.height() - content.size.h + _spriteBorder))
+                                (packContent.rect().left() + (-imageSize.width() + content_w)),
+                                (-packContent.rect().top() + ( imageSize.height() - content_h))
                                 );
                 }
             }
