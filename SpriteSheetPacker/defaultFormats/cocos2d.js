@@ -10,7 +10,7 @@ function exportSpriteSheet(dataFilePath, imageFilePath, spriteFrames, textureSiz
         plist["metadata"]["size"] = "{" + textureSize.width + "," + textureSize.height + "}";
     }
 
-    console.log("Collect spriteframes for cocos2d plist data");
+    //console.log("Collect spriteframes for cocos2d plist data");
     var cocosFrames = {};
     for (var key in spriteFrames) {
         var spriteFrame = spriteFrames[key];

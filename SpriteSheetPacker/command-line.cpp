@@ -131,6 +131,7 @@ int commandLine(QCoreApplication& app) {
             prependSmartFolderName = projectFile->prependSmartFolderName();
             rotateSprites = projectFile->rotateSprites();
             granularity = projectFile->granularity();
+            enableFindIdentical = projectFile->enableFindIdentical();
 
             if (!destinationSet) {
                 destination = QDir(projectFile->destPath());
@@ -260,6 +261,11 @@ int commandLine(QCoreApplication& app) {
     }
 
     PublishSpriteSheet publisher;
+
+    if(projectFile)
+    {
+        publisher.setPremultiplied(projectFile->premultiplied());
+    }
 
     // load formats
     PublishSpriteSheet::formats().clear();

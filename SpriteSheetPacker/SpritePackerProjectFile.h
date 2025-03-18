@@ -91,6 +91,9 @@ public:
     void setEncryptionKey(const QString& key) { _encryptionKey = key; }
     const QString& encryptionKey() { return _encryptionKey; }
 
+    void setEnableFindIdentical(bool e) { _enableFindIdentical = e; }
+    bool enableFindIdentical() const { return _enableFindIdentical; }
+
     QSize granularity() const { return _granularity; }
 
     virtual bool write(const QString& fileName);
@@ -127,6 +130,7 @@ protected:
 
     bool        _trimSpriteNames;
     bool        _prependSmartFolderName;
+    bool        _enableFindIdentical = true;
     QString     _encryptionKey;
 
     QSize _granularity = QSize(1,1);

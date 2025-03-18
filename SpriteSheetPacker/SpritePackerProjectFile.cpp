@@ -54,6 +54,7 @@ bool SpritePackerProjectFile::read(const QString &fileName) {
     if (json.contains("spriteBorder")) _spriteBorder = json["spriteBorder"].toInt();
     if (json.contains("imageFormat")) _imageFormat = imageFormatFromString(json["imageFormat"].toString());
     if (json.contains("pixelFormat")) _pixelFormat = pixelFormatFromString(json["pixelFormat"].toString());
+    if (json.contains("enableFindIdentical")) _enableFindIdentical = json["enableFindIdentical"].toBool();
     if (json.contains("premultiplied")) _premultiplied = json["premultiplied"].toBool();
     if (json.contains("pngOptMode")) _pngOptMode = json["pngOptMode"].toString();
     if (json.contains("pngOptLevel")) _pngOptLevel = json["pngOptLevel"].toInt();
@@ -136,6 +137,7 @@ bool SpritePackerProjectFile::write(const QString &fileName) {
     json["spriteBorder"] = _spriteBorder;
     json["imageFormat"] = imageFormatToString(_imageFormat);
     json["pixelFormat"] = pixelFormatToString(_pixelFormat);
+    json["enableFindIdentical"] = _enableFindIdentical;
     json["premultiplied"] = _premultiplied;
     json["pngOptMode"] = _pngOptMode;
     json["pngOptLevel"] = _pngOptLevel;
@@ -165,6 +167,11 @@ bool SpritePackerProjectFile::write(const QString &fileName) {
     json["trimSpriteNames"] = _trimSpriteNames;
     json["prependSmartFolderName"] = _prependSmartFolderName;
     json["encryptionKey"] = _encryptionKey;
+
+    if (_granularity.width() != 1)
+        json["granularityX"] = _granularity.width();
+    if (_granularity.height() != 1)
+        json["granularityY"] = _granularity.height();
 
     QFile file(fileName);
     file.open(QIODevice::WriteOnly | QIODevice::Text);

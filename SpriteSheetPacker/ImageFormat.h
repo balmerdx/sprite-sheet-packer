@@ -99,6 +99,32 @@ inline PixelFormat pixelFormatFromString(const QString& pixelFormat) {
     return kARGB8888;
 }
 
+inline QImage premultImage(const QImage& image)
+{
+    QImage out = image.convertToFormat(QImage::Format_ARGB32);
+    for (int y=0; y<image.height(); y++)
+    {
+        for (int x=0; x<image.width(); x++)
+        {
+            QRgb rgb = out.pixel(x, y);
+            int va = qAlpha(rgb);
+            int vr = qRed(rgb);
+            int vg = qGreen(rgb);
+            int vb = qBlue(rgb);
+            QRgb rgbPremult = qRgba(
+                (vr * (va + 1)) >> 8,
+                (vg * (va + 1)) >> 8,
+                (vb * (va + 1)) >> 8,
+                va
+            );
+
+            out.setPixel(x, y, rgbPremult);
+        }
+    }
+
+    return out;
+}
+
 inline QImage convertImage(const QImage& image, PixelFormat pixelFormat, bool premultiplied) {
     switch (pixelFormat) {
         case kRGB888: return image.convertToFormat(QImage::Format_RGB888);
@@ -116,14 +142,14 @@ inline QImage convertImage(const QImage& image, PixelFormat pixelFormat, bool pr
     }
     if (premultiplied) {
         switch (pixelFormat) {
-            case kARGB8888: return image.convertToFormat(QImage::Format_ARGB32);
-            case kARGB8565: return image.convertToFormat(QImage::Format_ARGB8565_Premultiplied);
-            case kARGB4444: return image.convertToFormat(QImage::Format_ARGB4444_Premultiplied);
+            case kARGB8888: return premultImage(image);
+            case kARGB8565: return premultImage(image).convertToFormat(QImage::Format_ARGB8565_Premultiplied);
+            case kARGB4444: return premultImage(image).convertToFormat(QImage::Format_ARGB4444_Premultiplied);
             default: break;
         }
     } else {
         switch (pixelFormat) {
-            case kARGB8888: return image.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+            case kARGB8888: return image.convertToFormat(QImage::Format_ARGB32);
             case kARGB8565: return image.convertToFormat(QImage::Format_ARGB8565_Premultiplied);
             case kARGB4444: return image.convertToFormat(QImage::Format_ARGB4444_Premultiplied);
             default: break;
