@@ -1,7 +1,8 @@
-
+//https://github.com/jhasse/poly2tri/tree/master/poly2tri
 INCLUDEPATH += $$PWD
 
 HEADERS += \
+    $$PWD/common/dll_symbol.h \
     $$PWD/common/shapes.h \
     $$PWD/common/utils.h \
     $$PWD/sweep/advancing_front.h \

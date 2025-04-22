@@ -31,6 +31,7 @@ INCLUDEPATH += 3rdparty
 SOURCES += main.cpp\
     ImageFillOuter.cpp \
     MainWindow.cpp \
+    PolygonImage2.cpp \
     SpriteAtlas.cpp \
     ScalingVariantWidget.cpp \
     SpritePackerProjectFile.cpp \
@@ -53,6 +54,7 @@ SOURCES += main.cpp\
 HEADERS += MainWindow.h \
     ImageFillOuter.h \
     ImageRotate.h \
+    PolygonImage2.h \
     SpriteAtlas.h \
     ScalingVariantWidget.h \
     SpritePackerProjectFile.h \
@@ -70,7 +72,8 @@ HEADERS += MainWindow.h \
     ContentProtectionDialog.h \
     ZoomGraphicsView.h \
     AnimationDialog.h \
-    ElapsedTimer.h
+    ElapsedTimer.h \
+    triangles.h
 
 #algorithm
 INCLUDEPATH += algorithm
@@ -105,6 +108,7 @@ include(3rdparty/poly2tri/poly2tri.pri)
 include(3rdparty/pngquant/pngquant.pri)
 include(3rdparty/lodepng/lodepng.pri)
 include(3rdparty/PVRTexTool/PVRTexTool.pri)
+include(../tests/PolygonImage/poly/balmer_poly.pri)
 
 OTHER_FILES += \
     defaultFormats/cocos2d.js \

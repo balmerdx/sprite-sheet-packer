@@ -1,4 +1,4 @@
-
+//https://github.com/nachovizzo/clipper
 INCLUDEPATH += $$PWD
 
 HEADERS += \

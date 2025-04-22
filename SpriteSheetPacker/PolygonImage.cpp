@@ -135,7 +135,7 @@ PolygonImage::PolygonImage(const QImage& image, const QRectF& rect, const float 
     }
 }
 
-std::vector<QPointF> PolygonImage::trace(const QRectF& rect, const float& threshold) {
+std::vector<QPointF> PolygonImage::trace(QRectF rect, float threshold) {
     auto result = findFirstNoneTransparentPixel(rect, threshold);
     if (result.first) {
         return marchSquare(rect, result.second, threshold);
@@ -144,7 +144,7 @@ std::vector<QPointF> PolygonImage::trace(const QRectF& rect, const float& thresh
     }
 }
 
-QPair<bool, QPointF> PolygonImage::findFirstNoneTransparentPixel(const QRectF& rect, const float& threshold) {
+QPair<bool, QPointF> PolygonImage::findFirstNoneTransparentPixel(QRectF rect, float threshold) {
     QPointF i;
     for(i.ry() = rect.top(); i.y() < rect.bottom(); i.ry()++) {
         for(i.rx() = rect.left(); i.x() < rect.right(); i.rx()++) {
@@ -162,10 +162,15 @@ unsigned char PolygonImage::getAlphaByIndex(const unsigned int& i) {
 }
 
 unsigned char PolygonImage::getAlphaByPos(const QPointF& pos) {
-    return qAlpha(_image.pixel(QPoint(pos.x(), pos.y())));
+    QPoint p(pos.x(), pos.y());
+
+    if( p.x() >= 0 && p.y() >= 0 && p.x() < _image.width() && p.y() < _image.height())
+        return qAlpha(_image.pixel(p));
+
+    return 0;
 }
 
-unsigned int PolygonImage::getSquareValue(const unsigned int& x, const unsigned int& y, const QRectF& rect, const float& threshold)
+unsigned int PolygonImage::getSquareValue(int x, int y, QRectF rect, float threshold)
 {
     /*
      checking the 2x2 pixel grid, assigning these values to each pixel, if not transparent
@@ -177,7 +182,8 @@ unsigned int PolygonImage::getSquareValue(const unsigned int& x, const unsigned 
      */
     unsigned int sv = 0;
     //NOTE: due to the way we pick points from texture, rect needs to be smaller, otherwise it goes outside 1 pixel
-    auto fixedRect = QRectF(rect.topLeft(), rect.size()-QSize(2,2));
+    //auto fixedRect = QRectF(rect.topLeft(), rect.size()-QSize(2,2));
+    auto fixedRect = rect;
 
     QPointF tl = QPointF(x-1, y-1);
     sv += (fixedRect.contains(tl) && getAlphaByPos(tl) > threshold)? 1 : 0;
@@ -191,7 +197,7 @@ unsigned int PolygonImage::getSquareValue(const unsigned int& x, const unsigned 
     return sv;
 }
 
-std::vector<QPointF> PolygonImage::marchSquare(const QRectF& rect, const QPointF& start, const float& threshold)
+std::vector<QPointF> PolygonImage::marchSquare(QRectF rect, QPointF start, float threshold)
 {
     int stepx = 0;
     int stepy = 0;
@@ -350,7 +356,7 @@ std::vector<QPointF> PolygonImage::marchSquare(const QRectF& rect, const QPointF
         problem = false;
         Q_ASSERT_X(count <= totalPixel, "oh no, marching square cannot find starting position", "");
     } while(curx != startx || cury != starty);
-    return _points;
+    return std::move(_points);
 }
 
 float PolygonImage::perpendicularDistance(const QPointF& i, const QPointF& start, const QPointF& end) {
