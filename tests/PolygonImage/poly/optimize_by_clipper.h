@@ -54,6 +54,10 @@ protected:
 
     //Оригинальные пиксели не должны быть затронуты нашей обрезкой.
     double clipOriginalDeltaArea(const ClipperLib::Path &clip_path);
+
+    //Для отверстий, которые не слишком малы вставляем прямоугольную область максимально большую
+    void addRectHoles(ImageBorderInt& out_border);
+    void addRectHole(const ClipperLib::Path& hole, ImageBorderInt& out_border);
 protected:
     //Изначальная граница, требуется для тестирования всякого
     std::vector<ImageBorderInt> original_elems;

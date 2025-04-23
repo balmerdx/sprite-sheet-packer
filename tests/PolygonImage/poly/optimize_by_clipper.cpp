@@ -6,7 +6,8 @@ using namespace ClipperLib;
 
 double min_factor(double delta_points, double delta_area)
 {
-    return delta_points + delta_area / ImageBorderInt::mul_factor / ImageBorderInt::mul_factor / 30; // !!! В параметры !!!
+    //return delta_points + delta_area / ImageBorderInt::mul_factor / ImageBorderInt::mul_factor / 30; // !!! В параметры !!!
+    return delta_points + delta_area / ImageBorderInt::mul_factor / ImageBorderInt::mul_factor / 100;
 }
 
 cInt Cross(const IntPoint& a, const IntPoint& b)
@@ -248,6 +249,8 @@ void OptimizeByClipper::optimize(const std::vector<ImageBorderElem>& elems_doubl
     out.border =  optimizeUnsorted1(unsorted_border);
     out.border = optimizeСoncaveSurface(out.border);
     //out.border = optimizeСoncaveSurface(out.border);
+
+    addRectHoles(out);
 
     result.push_back(std::move(out.to()));
 }
@@ -727,3 +730,121 @@ ClipperLib::Path OptimizeByClipper::optimizeСoncaveSurfaceSingleLine(const Clip
 
     return  out;
 }
+
+void OptimizeByClipper::addRectHoles(ImageBorderInt &out_border)
+{
+    for(const ImageBorderInt& elem : original_elems)
+    {
+        for(const Path& hole : elem.holes)
+        {
+            addRectHole(hole, out_border);
+        }
+    }
+}
+
+void OptimizeByClipper::addRectHole(const ClipperLib::Path& hole, ImageBorderInt &out_border)
+{
+    Path hole_clean;
+    CleanPolygon(hole, hole_clean);
+
+    double delta = -3 * ImageBorderInt::mul_factor;
+
+    ClipperOffset clip_offset;
+    clip_offset.AddPath(hole, jtMiter, etClosedPolygon);
+
+    Paths solution;
+    clip_offset.Execute(solution, delta);
+
+/*
+    Paths solution_clean;
+    for(const Path& in_poly : solution)
+    {
+        double distance = 1 * ImageBorderInt::mul_factor;
+        Path out_poly;
+        CleanPolygon(in_poly, out_poly, distance);
+        solution_clean.push_back(out_poly);
+        solution = solution_clean;
+    }
+*/
+
+    for(Path& cur_path : solution)
+    {
+        //Берём несколько точек, которые по разным направлениям экстремальны и
+        //только их оставляем в полигоне (очень неоптимально по скорости упрощения полигона)
+        std::vector<IntPoint> min_points;
+        int angles = 8;
+        for(int iangle=0; iangle < angles; iangle++)
+        {
+            auto angle = 2 * M_PI * iangle / angles;
+            auto dx = cos(angle);
+            auto dy = sin(angle);
+
+            bool found = false;
+            double min_dist = 0;
+            IntPoint min_point;
+            for(IntPoint& p : cur_path)
+            {
+                auto dist = p.X * dx + p.Y*dy;
+                if(!found || dist < min_dist)
+                {
+                    min_dist = dist;
+                    min_point = p;
+                    found = true;
+                }
+            }
+
+            if (found)
+                min_points.push_back(min_point);
+        }
+
+        Path simply_path;
+        for(IntPoint& p : cur_path)
+        {
+            for(IntPoint& inp : min_points)
+            {
+                if(inp==p)
+                {
+                    simply_path.push_back(p);
+                    break;
+                }
+            }
+        }
+
+        cur_path = simply_path;
+    }
+
+    {
+        //Оставляем только те, для которых min_factor < 0
+        Paths solution_clean;
+        for(Path& cur_path : solution)
+        {
+            auto area = Area(cur_path);
+            auto d = min_factor(cur_path.size(), -area);
+            if(d < 0)
+            {
+                solution_clean.push_back(std::move(cur_path));
+            }
+        }
+
+        solution = std::move(solution_clean);
+    }
+
+    //Решение успешно, если у нас новая дыра полностью внутри старой дыры
+    {
+        Paths solution_check;
+        Clipper clipper;
+        clipper.AddPath(hole, ptClip, true);
+        clipper.AddPaths(solution, ptSubject, true);
+        clipper.Execute(ctDifference, solution_check);
+
+        if (!solution_check.empty())
+            return;
+    }
+
+
+    for(Path& pout : solution)
+        out_border.holes.push_back(pout);
+    //out_border.border = solution[0];
+}
+
+

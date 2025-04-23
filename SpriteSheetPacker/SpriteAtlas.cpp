@@ -749,18 +749,20 @@ bool SpriteAtlas::packWithPolygon(const QVector<PackContent>& content) {
         int ymax = src_rect.bottom();
 
         xmin = std::max(0, xmin);
-        xmax = std::min(src.width(), xmin);
+        xmax = std::min(src.width(), xmax);
         ymin = std::max(0, ymin);
-        ymax = std::min(src.height(), xmax);
+        ymax = std::min(src.height(), ymax);
 
+        int xoffset = pos.x() - src_rect.left();
+        int yoffset = pos.y() - src_rect.top();
 
         for(int y=ymin; y<ymax; y++)
         {
             for(int x=xmin; x<xmax; x++)
             {
-                QRgb rgb = src.pixel(x,y);
+                QRgb rgb = src.pixel(x, y);
                 if (qAlpha(rgb) > trim_alpha)
-                    dst.setPixel(x + pos.x(), y + pos.y(), rgb);
+                    dst.setPixel(x + xoffset, y + yoffset, rgb);
             }
         }
     };

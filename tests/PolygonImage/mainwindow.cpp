@@ -104,10 +104,16 @@ void drawTriangles(QPixmap& pixmap, const std::vector<ImageBorderElem>& elems, i
 
     p.setPen(QColor(0, 255, 0));
 
-    auto draw_border = [line](const std::vector<p2t::Point>& border)
+    auto draw_border = [line](const ImageBorderElem& elem)
     {
-        std::vector<p2t::Point*> pborder = makeTempPoints(border);
+        std::vector<p2t::Point*> pborder = makeTempPoints(elem.border);
         p2t::CDT cdt(pborder);
+
+        for(auto& hole : elem.holes)
+        {
+            auto phole = makeTempPoints(hole);
+            cdt.AddHole(phole);
+        }
 
         cdt.Triangulate();
         std::vector<p2t::Triangle*> triangles = cdt.GetTriangles();
@@ -124,24 +130,16 @@ void drawTriangles(QPixmap& pixmap, const std::vector<ImageBorderElem>& elems, i
         }
     };
 
-    if (true)
     {
         OptimizeByClipper op;
         op.optimize(elems);
         int cidx = 0;
         for(auto& r : op.result)
         {
-            draw_border(r.border);
+            draw_border(r);
             p.setPen((cidx%2) ? QColor(255, 0, 0) : QColor(0, 0, 255));
             cidx++;
         }
-    } else
-    for(const ImageBorderElem& elem : elems)
-    {
-        OptimizeByClipper op;
-        op.optimize(elem);
-        for(auto& r : op.result)
-            draw_border(r.border);
     }
 }
 

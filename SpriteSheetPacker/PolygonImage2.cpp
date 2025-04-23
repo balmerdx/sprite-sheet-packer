@@ -63,6 +63,12 @@ PolygonImage2::PolygonImage2(const QImage& image, const QRectF& rect, const floa
         std::vector<p2t::Point*> pborder = makeTempPoints(elem.border);
         p2t::CDT cdt(pborder);
 
+        for(auto& hole : elem.holes)
+        {
+            auto phole = makeTempPoints(hole);
+            cdt.AddHole(phole);
+        }
+
         cdt.Triangulate();
         std::vector<p2t::Triangle*> tris = cdt.GetTriangles();
 
