@@ -4,10 +4,9 @@
 
 using namespace ClipperLib;
 
-double min_factor(double delta_points, double delta_area)
+double OptimizeByClipper::min_factor(double delta_points, double delta_area)
 {
-    //return delta_points + delta_area / ImageBorderInt::mul_factor / ImageBorderInt::mul_factor / 30; // !!! В параметры !!!
-    return delta_points + delta_area / ImageBorderInt::mul_factor / ImageBorderInt::mul_factor / 100;
+    return delta_points + delta_area / ImageBorderInt::mul_factor / ImageBorderInt::mul_factor / _params.pixels_per_point;
 }
 
 cInt Cross(const IntPoint& a, const IntPoint& b)
@@ -198,28 +197,6 @@ OptimizeByClipper::~OptimizeByClipper()
 {
 }
 
-void OptimizeByClipper::optimize(const ImageBorderElem& elem_double)
-{
-    ImageBorderInt elem;
-    elem.from(elem_double);
-
-    {
-        Paths simply_border;
-        SimplifyPolygon(elem.border, simply_border);
-        if (simply_border.size() != 1)
-        {
-            qDebug() << "OptimizeByClipper::optimize unexpected result!!! size =" << simply_border.size();
-        } else
-        {
-            elem.border = simply_border[0];
-        }
-    }
-
-    ImageBorderInt out;
-    out.border =  optimizeUnsorted0(elem.border);
-    result.push_back(std::move(out.to()));
-}
-
 void OptimizeByClipper::optimize(const std::vector<ImageBorderElem>& elems_double)
 {
     ClipperLib::Path unsorted_border;
@@ -246,11 +223,10 @@ void OptimizeByClipper::optimize(const std::vector<ImageBorderElem>& elems_doubl
 
 
     ImageBorderInt out;
-    out.border =  optimizeUnsorted1(unsorted_border);
+    out.border =  optimizeUnsorted(unsorted_border);
     out.border = optimizeСoncaveSurface(out.border);
-    //out.border = optimizeСoncaveSurface(out.border);
 
-    addRectHoles(out);
+    addHoles(out);
 
     result.push_back(std::move(out.to()));
 }
@@ -287,8 +263,7 @@ ClipperLib::Path OptimizeByClipper::boundBox(const ClipperLib::Path& border)
 
 ClipperLib::Path OptimizeByClipper::clipByAngle(const ClipperLib::Path& cur_border, const ClipperLib::Path& original_border, double angle)
 {
-    //!!!Вынести в параметры !!!
-    auto line_len = 1000. * ImageBorderInt::mul_factor;
+    auto line_len = _params.line_len * ImageBorderInt::mul_factor;
     IntPoint line0(0,0);
     IntPoint line1(lroundf(line_len*cos(angle)), lroundf(line_len*sin(angle)));
 
@@ -333,37 +308,13 @@ ClipperLib::Path OptimizeByClipper::clipByAngle(const ClipperLib::Path& cur_bord
         solution.push_back(cur_border);
     }
 
-    return solution[0]; ///?????
+    if (solution.empty())
+        return Path();
+
+    return solution[0];
 }
 
-ClipperLib::Path OptimizeByClipper::optimizeUnsorted0(const ClipperLib::Path& unsorted_border)
-{
-    Path border =  boundBox(unsorted_border);
-
-    /*
-    for(int iangle = 0; iangle < 4; iangle++ )
-        out.border =  clipByAngle(out.border, elem.border, (iangle*2+1)*M_PI/4);
-    */
-    const int angles = 32;
-    for(int iangle = 0; iangle < angles; iangle++ )
-    {
-        double prev_area = Area(border);
-        auto clipped_border = clipByAngle(border, unsorted_border, iangle*M_PI*2/angles);;
-        double new_area = Area(clipped_border);
-
-        int delta_points = (int)clipped_border.size() - (int)border.size();
-        double delta_area = prev_area - new_area;
-
-        if (delta_area < 100 && delta_points > 0) //!!! Вынести в параметры !!!!
-            continue;
-
-        border = clipped_border;
-    }
-
-    return border;
-}
-
-ClipperLib::Path OptimizeByClipper::optimizeUnsorted1(const ClipperLib::Path& unsorted_border)
+ClipperLib::Path OptimizeByClipper::optimizeUnsorted(const ClipperLib::Path& unsorted_border)
 {
     Path border =  boundBox(unsorted_border);
 
@@ -380,16 +331,16 @@ ClipperLib::Path OptimizeByClipper::optimizeUnsorted1(const ClipperLib::Path& un
             int delta_points;
 
             //Меньше - лучше.
-            double factor()
+            double factor(OptimizeByClipper* clipper)
             {
-                return min_factor(delta_points, delta_area);
+                return clipper->min_factor(delta_points, delta_area);
             }
         };
 
         std::vector<Data> data;
 
         double prev_area = Area(border);
-        const int angles2 = 8;
+        const int angles2 = _params.clip_angles_count;
         for(int iangle2 = 0; iangle2 <= angles2; iangle2++)
         {
             Data d;
@@ -406,11 +357,11 @@ ClipperLib::Path OptimizeByClipper::optimizeUnsorted1(const ClipperLib::Path& un
         //Ищем минимум по какому-то критерию.
         //Выбираем две соседние точки минимальные и там метод деления пополам используем
         size_t min_idx = 0;
-        double min_factor = data[0].factor();
+        double min_factor = data[0].factor(this);
         for(size_t i = 0; i < data.size(); i++)
         {
             Data& d = data[i];
-            auto f = d.factor();
+            auto f = d.factor(this);
             if (f < min_factor)
             {
                 min_factor = f;
@@ -420,8 +371,8 @@ ClipperLib::Path OptimizeByClipper::optimizeUnsorted1(const ClipperLib::Path& un
 
         if (min_idx > 0 && min_idx+1 < data.size())
         {
-            double fprev = data[min_idx-1].factor();
-            double fnext = data[min_idx+1].factor();
+            double fprev = data[min_idx-1].factor(this);
+            double fnext = data[min_idx+1].factor(this);
             if (fprev < fnext)
             {
                 min_idx--;
@@ -437,9 +388,9 @@ ClipperLib::Path OptimizeByClipper::optimizeUnsorted1(const ClipperLib::Path& un
         }
 
         double angle0 = data[min_idx].angle;
-        double factor0 = data[min_idx].factor();
+        double factor0 = data[min_idx].factor(this);
         double angle1 = data[min_idx+1].angle;
-        double factor1 = data[min_idx+1].factor();
+        double factor1 = data[min_idx+1].factor(this);
 
         double angle_mid = angle0;
         double f_mid = factor0;
@@ -455,7 +406,7 @@ ClipperLib::Path OptimizeByClipper::optimizeUnsorted1(const ClipperLib::Path& un
             d.points = clipped_border.size();
             d.delta_points = (int)clipped_border.size() - (int)border.size();
 
-            f_mid = d.factor();
+            f_mid = d.factor(this);
             if (factor0 < factor1)
             {
                 factor1 = f_mid;
@@ -509,83 +460,97 @@ double OptimizeByClipper::clipOriginalDeltaArea(const Path& clip_path)
 
 ClipperLib::Path OptimizeByClipper::optimizeСoncaveSurface(const ClipperLib::Path& border)
 {
-    std::vector<Path> clip_triangles;
+    struct Variants
+    {
+        //У нас есть несколько вариантов, из которых надо выбрать один, лучший
+        std::vector<Path> variants;
+    };
+
+    const int variant_count = _params.edge_spit_variatns_count;
+    std::vector<Variants> clip_triangles;
     for(size_t i=0; i<border.size(); i++)
     {
+        clip_triangles.push_back(Variants());
         auto p0 = border[i];
         auto p1 = border[(i + 1)%border.size()];
-        ClipperLib::Path out = optimizeСoncaveSurfaceSingleLine(border, p0, p1);
-        if (out.size() > 0)
-        {
-            clip_triangles.push_back(out);
 
+        for(int iv=0; iv<variant_count; iv++)
+        {
+            double lerp_factor = (1 + iv) / (double)(variant_count+2);
+            ClipperLib::Path out = findClipTriangle(p0, p1, lerp_factor);
+            if (out.size() > 0)
+            {
+                clip_triangles.back().variants.push_back(out);
+            }
         }
     }
 
     ClipperLib::Path out_border = border;
-    for(Path& clip_triangle : clip_triangles)
+    for(const Variants& variants : clip_triangles)
     {
-        if (clip_triangle.empty())
-            continue;
-
-        double delta_original = clipOriginalDeltaArea(clip_triangle);
-        if (delta_original < -1)
-            continue;
-
-        Clipper clipper;
-        clipper.AddPath(out_border, ptSubject, true);
-        clipper.AddPath(clip_triangle, ptClip, true);
-
-        Paths solution;
-        bool ok = clipper.Execute(ctDifference, solution);
-        if (!ok)
+        bool found = false;
+        Path min_solution;
+        double min_min_factor = 0;
+        for(const Path& clip_triangle : variants.variants)
         {
-            continue;
+            if (clip_triangle.empty())
+                continue;
+
+            double delta_original = clipOriginalDeltaArea(clip_triangle);
+            if (delta_original < -1)
+                continue;
+
+            Clipper clipper;
+            clipper.AddPath(out_border, ptSubject, true);
+            clipper.AddPath(clip_triangle, ptClip, true);
+
+            Paths solution;
+            bool ok = clipper.Execute(ctDifference, solution);
+            if (!ok)
+            {
+                continue;
+            }
+
+            if (solution.size() != 1)
+            {
+                continue;
+            }
+
+            auto prev_area = Area(out_border);
+            auto new_area = Area(solution[0]);
+            int delta_points = (int)solution[0].size() - (int)out_border.size();
+            auto delta_area = new_area - prev_area;
+            auto cur_min_factor = min_factor(delta_points, delta_area);
+            if (cur_min_factor >= 0)
+                continue;
+
+            if (!found || cur_min_factor < min_min_factor)
+            {
+                found = true;
+                min_min_factor = cur_min_factor;
+                min_solution = std::move(solution[0]);
+            }
         }
 
-        if (solution.size() != 1)
+        if (found)
         {
-            continue;
+            out_border = std::move(min_solution);
         }
-
-        auto prev_area = Area(out_border);
-        auto new_area = Area(solution[0]);
-        int delta_points = (int)solution[0].size() - (int)out_border.size();
-        double delta_area = new_area - prev_area;
-
-        if (min_factor(delta_points, delta_area) < 0)
-        {
-            out_border = solution[0];
-        }
-
     }
 
     return out_border;
 }
 
-ClipperLib::Path OptimizeByClipper::optimizeСoncaveSurfaceSingleLine(const ClipperLib::Path& border,
-                  ClipperLib::IntPoint p0, ClipperLib::IntPoint p1)
+ClipperLib::Path OptimizeByClipper::findClipTriangle(ClipperLib::IntPoint p0, ClipperLib::IntPoint p1, double lerp_factor)
 {
-
-    static int idx = 0;
-    idx++;
-    if(idx==1)
-    {
-        int crossed;
-        IntPoint pos = SegmentCrossLine(IntPoint(3, -2), IntPoint(3, 2), IntPoint(0,0), IntPoint(10, 0), crossed);
-        int k =0;
-    }
-
     Path out;
 
     IntPoint n = Normal(p1 - p0);
-    IntPoint pc = (p1 + p0) * 0.5;
+    //IntPoint pc = (p1 + p0) * 0.5;
+    IntPoint pc = (p1 - p0) * lerp_factor + p0;
     IntPoint pn = pc + n;
     //Небольшой сдвиг на пол пикселя
     IntPoint nc = n * -(ImageBorderInt::mul_factor / Length(n) * 0.5);
-
-    //!!! Большой сдвиг, вынести в параметры !!!
-    //IntPoint nc = n * -(ImageBorderInt::mul_factor / Length(n) * 100);
 
     IntPoint cross_pt;
     IntPoint p0min;
@@ -631,9 +596,7 @@ ClipperLib::Path OptimizeByClipper::optimizeСoncaveSurfaceSingleLine(const Clip
             }
         }
 
-        //!!! Небольшой сдвиг, вынести в параметры !!!
-        near_cross_pt = near_cross_pt - n * (ImageBorderInt::mul_factor / Length(n) * 1);
-
+        near_cross_pt = near_cross_pt - n * (ImageBorderInt::mul_factor / Length(n) * _params.edge_split_point_offset);
 
         if(!found)
             return Path();
@@ -731,23 +694,23 @@ ClipperLib::Path OptimizeByClipper::optimizeСoncaveSurfaceSingleLine(const Clip
     return  out;
 }
 
-void OptimizeByClipper::addRectHoles(ImageBorderInt &out_border)
+void OptimizeByClipper::addHoles(ImageBorderInt &out_border)
 {
     for(const ImageBorderInt& elem : original_elems)
     {
         for(const Path& hole : elem.holes)
         {
-            addRectHole(hole, out_border);
+            addHole(hole, out_border);
         }
     }
 }
 
-void OptimizeByClipper::addRectHole(const ClipperLib::Path& hole, ImageBorderInt &out_border)
+void OptimizeByClipper::addHole(const ClipperLib::Path& hole, ImageBorderInt &out_border)
 {
     Path hole_clean;
     CleanPolygon(hole, hole_clean);
 
-    double delta = -3 * ImageBorderInt::mul_factor;
+    double delta = - _params.hole_clipper_offset_delta * ImageBorderInt::mul_factor;
 
     ClipperOffset clip_offset;
     clip_offset.AddPath(hole, jtMiter, etClosedPolygon);
@@ -755,24 +718,12 @@ void OptimizeByClipper::addRectHole(const ClipperLib::Path& hole, ImageBorderInt
     Paths solution;
     clip_offset.Execute(solution, delta);
 
-/*
-    Paths solution_clean;
-    for(const Path& in_poly : solution)
-    {
-        double distance = 1 * ImageBorderInt::mul_factor;
-        Path out_poly;
-        CleanPolygon(in_poly, out_poly, distance);
-        solution_clean.push_back(out_poly);
-        solution = solution_clean;
-    }
-*/
-
     for(Path& cur_path : solution)
     {
         //Берём несколько точек, которые по разным направлениям экстремальны и
         //только их оставляем в полигоне (очень неоптимально по скорости упрощения полигона)
         std::vector<IntPoint> min_points;
-        int angles = 8;
+        int angles = _params.points_in_hole;
         for(int iangle=0; iangle < angles; iangle++)
         {
             auto angle = 2 * M_PI * iangle / angles;
@@ -846,5 +797,3 @@ void OptimizeByClipper::addRectHole(const ClipperLib::Path& hole, ImageBorderInt
         out_border.holes.push_back(pout);
     //out_border.border = solution[0];
 }
-
-

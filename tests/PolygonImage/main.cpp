@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
     }
 
     //QString filename = R"(images\holes.png)";
-    QString filename = R"(images\hole.png)";
+    //QString filename = R"(images\hole.png)";
     //QString filename = R"(images\fill_outer.png)";
     //QString filename = R"(images\touched_areas.png)";
     //QString filename = R"(images\flag_1.png)";
@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
     //QString filename = R"(images\stone_95.png)";
     //QString filename = R"(images\xy.png)";
     //QString filename = R"(images\tile_floor_big3.png)";
-    //QString filename = R"(images\a0.png)";
+    QString filename = R"(images\a0.png)";
 
 
     MainWindow w;
