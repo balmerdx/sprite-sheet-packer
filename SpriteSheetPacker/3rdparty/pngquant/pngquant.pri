@@ -1,4 +1,7 @@
-QMAKE_CFLAGS += -std=c11
+#QMAKE_CFLAGS += -std=c11
+win32 {
+    DEFINES += "_CRT_SECURE_NO_WARNINGS"
+}
 
 INCLUDEPATH += $$PWD
 

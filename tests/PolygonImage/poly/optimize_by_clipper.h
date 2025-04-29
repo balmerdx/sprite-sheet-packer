@@ -56,8 +56,6 @@ public:
     OptimizeByClipper();
     ~OptimizeByClipper();
 
-    //Сваливаем все точки в одну большую кучу.
-    //Так не будет возможности holes оптимизировать, но зато будет сильно надёжнее
     void optimize(const std::vector<ImageBorderElem>& elems_double);
 
     std::vector<ImageBorderElem> result;

@@ -18,68 +18,6 @@ int pow2(int len) {
     return pow(2,order);
 }
 
-PackContent::PackContent() {
-    // only for QVector
-    qDebug() << "PackContent::PackContent()";
-}
-PackContent::PackContent(const QString& name, const QImage& image) {
-    _name = name;
-    //auto format = image.format();
-    if(image.format() != QImage::Format_ARGB32)
-        _image = image.convertToFormat(QImage::Format_ARGB32);
-    else
-        _image = image;
-    _rect = QRect(0, 0, _image.width(), _image.height());
-}
-
-bool PackContent::isIdentical(const PackContent& other) {
-    if (_rect != other._rect) return false;
-
-    for (int x = _rect.left(); x < _rect.right(); ++x) {
-        for (int y = _rect.top(); y < _rect.bottom(); ++y) {
-            if (_image.pixel(x, y) != other._image.pixel(x, y)) return false;
-        }
-    }
-
-    return true;
-}
-
-void PackContent::trim(int alpha) {
-    int l = _image.width();
-    int t = _image.height();
-    int r = 0;
-    int b = 0;
-    for (int y=0; y<_image.height(); y++) {
-        bool rowFilled = false;
-        for (int x=0; x<_image.width(); x++) {
-            int a = qAlpha(_image.pixel(x, y));
-            if (a >= alpha) {
-                rowFilled = true;
-                r = qMax(r, x);
-                if (l > x) {
-                    l = x;
-                }
-            }
-        }
-        if (rowFilled) {
-            t = qMin(t, y);
-            b = y;
-        }
-    }
-    _rect = QRect(QPoint(l, t), QPoint(r,b));
-    if ((_rect.width() % 2) != (_image.width() % 2)) {
-        if (l>0) l--; else r++;
-        _rect = QRect(QPoint(l, t), QPoint(r,b));
-    }
-    if ((_rect.height() % 2) != (_rect.height() % 2)) {
-        if (t>0) t--; else b++;
-        _rect = QRect(QPoint(l, t), QPoint(r,b));
-    }
-    if ((_rect.width()<0)||(_rect.height()<0)) {
-        _rect = QRect(0, 0, 2, 2);
-    }
-}
-
 SpriteAtlas::SpriteAtlas(const QStringList& sourceList, int textureBorder, int spriteBorder, int trim, bool heuristicMask, bool pow2, bool forceSquared,
                          QSize maxSize, float scale, QSize granularity, QSize fixedTextureSize)
     : _sourceList(sourceList)
@@ -171,12 +109,19 @@ bool SpriteAtlas::generate(SpriteAtlasGenerateProgress* progress) {
 
         // Trim / Crop
         if (_trim) {
-            packContent.trim(_trim);
             if (_polygonMode.enable) {
                 qDebug() << (*it_f).first;
                 PolygonImage2 polygonImage(packContent.image(), packContent.rect(), _polygonMode.epsilon, _trim);
                 //packContent.setPolygons(polygonImage.polygons());
                 packContent.setTriangles(polygonImage.triangles());
+                /* test code
+                QImage tmp_img = packContent.triangles().drawTriangles();
+                tmp_img.save("tmp_img.png");
+                exit(1);
+                */
+            } else
+            {
+                packContent.trim(_trim);
             }
         }
 
@@ -659,6 +604,97 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
     return true;
 }
 
+#define NEW_PACK_WITH_POLYGON
+#ifdef NEW_PACK_WITH_POLYGON
+
+#include "polygon_pack_balmer.h"
+bool SpriteAtlas::packWithPolygon(const QVector<PackContent>& content) {
+    if (_progress)
+        _progress->setProgressText("Build pack contents...");
+
+    std::vector<PackContent> contents_std;
+    contents_std.insert(contents_std.end(), content.begin(), content.end());
+    PolygonPackBalmer polygon_pack;
+    QSize granularity(4,4);
+    polygon_pack.place(contents_std, _maxTextureSize, granularity);
+
+    auto outputContent = polygon_pack.contentList();
+
+    OutputData outputData;
+
+    outputData._atlasImage = QImage(polygon_pack.bounds().width(), polygon_pack.bounds().height(), QImage::Format_RGBA8888);
+    outputData._atlasImage.fill(QColor(0, 0, 0, 0));
+
+    //Копируем попиксельно, только достаточно непрозрачные пиксели (>_trim)
+    auto copy_rect = [](QImage& dst, const QImage& src, QPoint pos, QRect src_rect, int trim_alpha)
+    {
+        int xmin = src_rect.left();
+        int ymin = src_rect.top();
+        int xmax = src_rect.right();
+        int ymax = src_rect.bottom();
+
+        xmin = std::max(0, xmin);
+        xmax = std::min(src.width(), xmax);
+        ymin = std::max(0, ymin);
+        ymax = std::min(src.height(), ymax);
+
+        int xoffset = pos.x() - src_rect.left();
+        int yoffset = pos.y() - src_rect.top();
+
+        for(int y=ymin; y<ymax; y++)
+        {
+            for(int x=xmin; x<xmax; x++)
+            {
+                QRgb rgb = src.pixel(x, y);
+                if (qAlpha(rgb) > trim_alpha)
+                    dst.setPixel(x + xoffset, y + yoffset, rgb);
+            }
+        }
+    };
+
+
+    //_textureBorder - пока не сделано, надо другими методами это делать, внутри polygon_pack
+    for(auto& content : outputContent) {
+        if (_aborted) return false;
+
+        // retreive your data.
+        const PackContent &packContent = content.content();
+        SpriteFrameInfo spriteFrame;
+
+        spriteFrame.triangles = packContent.triangles();
+        spriteFrame.frame = QRect(QPoint(content.bounds().left() + _textureBorder, content.bounds().top() + _textureBorder), QPoint(content.bounds().right(), content.bounds().bottom()));
+        spriteFrame.offset = QPoint(
+            content.initial_bound().left(),
+            content.initial_bound().top()
+            );
+        spriteFrame.rotated = false;
+        spriteFrame.sourceColorRect = packContent.rect();
+        spriteFrame.sourceSize = packContent.image().size();
+
+        copy_rect(outputData._atlasImage, packContent.image(),
+                  QPoint(content.bounds().left() + _textureBorder, content.bounds().top() + _textureBorder),
+                  content.initial_bound(), _trim);
+
+        outputData._spriteFrames[packContent.name()] = spriteFrame;
+
+        // add ident to sprite frames
+        auto identicalIt = _identicalFrames.find(packContent.name());
+        if (identicalIt != _identicalFrames.end()) {
+            QStringList identicalList;
+            for (auto ident: (*identicalIt)) {
+                outputData._spriteFrames[ident] = spriteFrame;
+
+                identicalList.push_back(ident);
+            }
+        }
+    }
+
+
+    _outputData.push_front(outputData);
+
+    return true;
+}
+#else
 bool SpriteAtlas::packWithPolygon(const QVector<PackContent>& content) {
     if (_progress)
         _progress->setProgressText("Build pack contents...");
@@ -696,50 +732,6 @@ bool SpriteAtlas::packWithPolygon(const QVector<PackContent>& content) {
     outputData._atlasImage = QImage(container.bounds().width() + _textureBorder * 2, container.bounds().height() + _textureBorder * 2, QImage::Format_RGBA8888);
     outputData._atlasImage.fill(QColor(0, 0, 0, 0));
 
-/*
-    QPainter painter(&outputData._atlasImage);
-    for(auto itor = outputContent.begin(); itor != outputContent.end(); itor++ ) {
-        if (_aborted) return false;
-
-        const PolyPack2D::Content<PackContent> &content = *itor;
-
-        // retreive your data.
-        const PackContent &packContent = content.content();
-        SpriteFrameInfo spriteFrame;
-
-        spriteFrame.triangles = packContent.triangles();
-        spriteFrame.frame = QRect(QPoint(content.bounds().left + _textureBorder, content.bounds().top + _textureBorder), QPoint(content.bounds().right, content.bounds().bottom));
-        spriteFrame.offset = QPoint(
-                    packContent.rect().left(),
-                    packContent.rect().top()
-                    );
-        spriteFrame.rotated = false;
-        spriteFrame.sourceColorRect = packContent.rect();
-        spriteFrame.sourceSize = packContent.image().size();
-
-        QPainterPath clipPath;
-        for (auto polygon: packContent.polygons()) {
-            clipPath.addPolygon(QPolygonF(polygon.begin(), polygon.end()));
-        }
-        clipPath.translate(content.bounds().left + _textureBorder, content.bounds().top + _textureBorder);
-        painter.setClipPath(clipPath);
-        painter.drawImage(QPoint(content.bounds().left + _textureBorder, content.bounds().top + _textureBorder), packContent.image(), packContent.rect());
-
-        outputData._spriteFrames[packContent.name()] = spriteFrame;
-
-        // add ident to sprite frames
-        auto identicalIt = _identicalFrames.find(packContent.name());
-        if (identicalIt != _identicalFrames.end()) {
-            QStringList identicalList;
-            for (auto ident: (*identicalIt)) {
-                outputData._spriteFrames[ident] = spriteFrame;
-
-                identicalList.push_back(ident);
-            }
-        }
-    }
-    painter.end();
-*/
     //Копируем попиксельно, только достаточно непрозрачные пиксели (>_trim)
     auto copy_rect = [](QImage& dst, const QImage& src, QPoint pos, QRect src_rect, int trim_alpha)
     {
@@ -807,6 +799,7 @@ bool SpriteAtlas::packWithPolygon(const QVector<PackContent>& content) {
 
     return true;
 }
+#endif
 
 void SpriteAtlas::onPlaceCallback(int current, int count) {
     if (_progress)

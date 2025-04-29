@@ -2,10 +2,8 @@
 #include <QDebug>
 #include <QPainter>
 
-#include "poly/optimize_polygon.h"
 #include "poly/optimize_by_clipper.h"
-//#include "clipper.hpp"
-//#include "poly2tri.h"
+#include "poly/bin_image.h"
 
 QImage createCheckmate(QSize size)
 {
@@ -143,6 +141,53 @@ void drawTriangles(QPixmap& pixmap, const std::vector<ImageBorderElem>& elems, i
     }
 }
 
+void drawBinImage(QPixmap& checkmate, ImageBorder& ib, int scale)
+{
+    int granularity = 1;
+    BinImage bi(ib.colors, granularity, granularity);
+    BinImage image2(bi.width(), bi.height());
+
+    {
+        QString filename = R"(images\fill_outer.png)";
+        QImage img;
+        if (!img.load(filename))
+        {
+            qDebug() << "Cannot load " << filename;
+            return;
+        }
+
+        BinImage mask(img, granularity, granularity);
+        BinImageTest test(mask);
+/*
+        for(int x=0; x<10; x++)
+            test.place(image2, x, x*16);
+*/
+        for(int y=0; y<bi.height()-img.height(); y++)
+        {
+            for(int x=0; x<bi.width()-img.width(); x++)
+            {
+                if (test.test(bi, x, y) && test.test(image2, x, y))
+                {
+                    test.place(image2, x, y);
+                }
+            }
+        }
+    }
+
+    checkmate = QPixmap::fromImage(bi.qimage());
+    checkmate = checkmate.scaledToWidth(checkmate.width()*scale*granularity);
+
+    auto pixmap2 = QPixmap::fromImage(image2.qimage(qRgb(0x80, 0, 0x80), 0));
+    pixmap2 = pixmap2.scaledToWidth(pixmap2.width()*scale*granularity);
+
+    {
+        QPainter p(&checkmate);
+        p.drawPixmap(0, 0, pixmap2);
+    }
+
+    drawBorder(checkmate, ib.elems, scale);
+}
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -183,8 +228,6 @@ bool MainWindow::load(QString filename)
         ImageBorderParams params;
         //params.poorly_visible_pixels_count = 0; //Для теста не удаляем мелкие области
         ib.construct(img, params);
-        //img = ib.tst.qalpha();
-        //img = ib.tst.qgray();
         if (draw_colors)
             img = ib.colors.qpal();
     }
@@ -200,10 +243,19 @@ bool MainWindow::load(QString filename)
     const int scale = 5;
     checkmate = checkmate.scaledToWidth(checkmate.width()*scale);
 
-    if (drawType == DrawType::Polygon)
-        drawBorder(checkmate, ib.elems, scale);
-    else
+    switch(drawType)
+    {
+    case DrawType::Triangle:
         drawTriangles(checkmate, ib.elems, scale);
+        break;
+    case DrawType::Polygon:
+        drawBorder(checkmate, ib.elems, scale);
+        break;
+    case DrawType::BinImage:
+        drawBinImage(checkmate, ib, scale);
+        break;
+    }
+
 
     labelImage->setPixmap(checkmate);
 
@@ -226,6 +278,12 @@ void MainWindow::addMenuElems()
     });
     actTriangle->setCheckable(true);
 
+    actBinImage = smenu->addAction("BinImage", [this](){
+        onSwitchDrawType(DrawType::BinImage);
+        load(filename);
+    });
+    actBinImage->setCheckable(true);
+
     onSwitchDrawType(DrawType::Triangle);
 }
 
@@ -235,4 +293,5 @@ void MainWindow::onSwitchDrawType(DrawType dt)
     drawType = dt;
     actPolygon->setChecked(drawType==DrawType::Polygon);
     actTriangle->setChecked(drawType==DrawType::Triangle);
+    actBinImage->setChecked(drawType==DrawType::BinImage);
 }

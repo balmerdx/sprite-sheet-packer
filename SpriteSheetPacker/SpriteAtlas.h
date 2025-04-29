@@ -5,6 +5,7 @@
 #include <QImage>
 
 #include "PolygonImage.h"
+#include "pack_content.h"
 
 struct SpriteFrameInfo {
 public:
@@ -15,30 +16,6 @@ public:
     QSize   sourceSize;
 
     Triangles triangles;
-};
-
-class PackContent {
-public:
-    PackContent();
-    PackContent(const QString& name, const QImage& image);
-
-    bool isIdentical(const PackContent& other);
-    void trim(int alpha);
-    void setTriangles(const Triangles& triangles) { _triangles = triangles; }
-    //void setPolygons(const Polygons& polygons) { _polygons = polygons; }
-
-    const QString& name() const { return _name; }
-    const QImage& image() const { return _image; }
-    const QRect& rect() const { return _rect; }
-    const Triangles& triangles() const { return _triangles; }
-    //const Polygons& polygons() const { return _polygons; }
-
-private:
-    QString _name;
-    QImage  _image;
-    QRect   _rect;
-    Triangles _triangles;
-    //Polygons  _polygons;
 };
 
 class SpriteAtlasGenerateProgress: public QObject

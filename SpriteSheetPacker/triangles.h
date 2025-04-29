@@ -21,6 +21,9 @@ struct Triangles {
         }
         debugPartInfo.push_back(other.indices.size() / 3);
     }
+
+    //Предполагаем, что QPoint имеют неотрицательные значения и расположенны недалеко от нуля.
+    QImage drawTriangles() const;
 };
 
 typedef std::vector<std::vector<QPointF>> Polygons;

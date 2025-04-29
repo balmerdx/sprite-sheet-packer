@@ -41,6 +41,7 @@ SOURCES += main.cpp\
     PublishStatusDialog.cpp \
     AboutDialog.cpp \
     SpritesTreeWidget.cpp \
+    algorithm/polygon_pack_balmer.cpp \
     command-line.cpp \
     PolygonImage.cpp \
     SpriteAtlasPreview.cpp \
@@ -49,7 +50,9 @@ SOURCES += main.cpp\
     ContentProtectionDialog.cpp \
     ZoomGraphicsView.cpp \
     AnimationDialog.cpp \
-    ElapsedTimer.cpp
+    ElapsedTimer.cpp \
+    pack_content.cpp \
+    triangles.cpp
 
 HEADERS += MainWindow.h \
     ImageFillOuter.h \
@@ -73,6 +76,8 @@ HEADERS += MainWindow.h \
     ZoomGraphicsView.h \
     AnimationDialog.h \
     ElapsedTimer.h \
+    algorithm/polygon_pack_balmer.h \
+    pack_content.h \
     triangles.h
 
 #algorithm

@@ -5,6 +5,7 @@
 #include <utility>
 #include <QDebug>
 
+
 struct FillIteratePoint
 {
     int x, y;
@@ -304,7 +305,6 @@ void ImageBorder::construct(const AImage& image, ImageBorderParams params)
     */
     _params = params;
 
-    tst = std::move(AImage(image.width(), image.height()));
     AImage img(image.width(), image.height());
     colors = std::move(AImage32(image.width(), image.height()));
 
@@ -366,8 +366,6 @@ void ImageBorder::fillOuterBorder(AImage& img, const AImage &original_img)
             int x,y;
             if (!fi.next(x,y))
                 break;
-
-            tst.set(x, y, 255);
 
             if (original_img.get(x,y) > _params.poorly_visible_treshold)
                 good_visible_pixels_count++;
