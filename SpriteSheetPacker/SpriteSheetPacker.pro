@@ -28,53 +28,54 @@ CONFIG(release,debug|release) {
 
 INCLUDEPATH += 3rdparty
 
-SOURCES += main.cpp\
+SOURCES += main.cpp \
+    gui/AboutDialog.cpp \
+    gui/AnimationDialog.cpp \
+    gui/ContentProtectionDialog.cpp \
+    gui/MainWindow.cpp \
+    gui/PreferencesDialog.cpp \
+    gui/PublishStatusDialog.cpp \
+    gui/ScalingVariantWidget.cpp \
+    gui/SpriteAtlasPreview.cpp \
+    gui/SpritesTreeWidget.cpp \
+    gui/StatusBarWidget.cpp \
+    gui/UpdaterDialog.cpp \
+    gui/ZoomGraphicsView.cpp \
     ImageFillOuter.cpp \
-    MainWindow.cpp \
     PolygonImage2.cpp \
     SpriteAtlas.cpp \
-    ScalingVariantWidget.cpp \
     SpritePackerProjectFile.cpp \
     PngOptimizer.cpp \
     PublishSpriteSheet.cpp \
-    PreferencesDialog.cpp \
-    PublishStatusDialog.cpp \
-    AboutDialog.cpp \
-    SpritesTreeWidget.cpp \
     algorithm/polygon_pack_balmer.cpp \
     command-line.cpp \
     PolygonImage.cpp \
-    SpriteAtlasPreview.cpp \
-    StatusBarWidget.cpp \
-    UpdaterDialog.cpp \
-    ContentProtectionDialog.cpp \
-    ZoomGraphicsView.cpp \
-    AnimationDialog.cpp \
     ElapsedTimer.cpp \
     pack_content.cpp \
     triangles.cpp
 
-HEADERS += MainWindow.h \
+HEADERS += \
+    gui/AboutDialog.h \
+    gui/AnimationDialog.h \
+    gui/ContentProtectionDialog.h \
+    gui/MainWindow.h \
+    gui/PreferencesDialog.h \
+    gui/PublishStatusDialog.h \
+    gui/ScalingVariantWidget.h \
+    gui/SpriteAtlasPreview.h \
+    gui/SpritesTreeWidget.h \
+    gui/StatusBarWidget.h \
+    gui/UpdaterDialog.h \
+    gui/ZoomGraphicsView.h \
     ImageFillOuter.h \
     ImageRotate.h \
     PolygonImage2.h \
     SpriteAtlas.h \
-    ScalingVariantWidget.h \
     SpritePackerProjectFile.h \
     PngOptimizer.h \
     PublishSpriteSheet.h \
-    PreferencesDialog.h \
-    PublishStatusDialog.h \
-    AboutDialog.h \
-    SpritesTreeWidget.h \
     PolygonImage.h \
-    SpriteAtlasPreview.h \
     ImageFormat.h \
-    StatusBarWidget.h \
-    UpdaterDialog.h \
-    ContentProtectionDialog.h \
-    ZoomGraphicsView.h \
-    AnimationDialog.h \
     ElapsedTimer.h \
     algorithm/polygon_pack_balmer.h \
     pack_content.h \
@@ -92,16 +93,17 @@ SOURCES += algorithm/polypack2d.cpp
 
 #other...
 
-FORMS += MainWindow.ui \
-    ScalingVariantWidget.ui \
-    PreferencesDialog.ui \
-    PublishStatusDialog.ui \
-    AboutDialog.ui \
-    SpriteAtlasPreview.ui \
-    StatusBarWidgetatusbarwidget.ui \
-    UpdaterDialog.ui \
-    ContentProtectionDialog.ui \
-    AnimationDialog.ui
+FORMS += \
+    gui/AboutDialog.ui \
+    gui/AnimationDialog.ui \
+    gui/ContentProtectionDialog.ui \
+    gui/MainWindow.ui \
+    gui/PreferencesDialog.ui \
+    gui/PublishStatusDialog.ui \
+    gui/ScalingVariantWidget.ui \
+    gui/SpriteAtlasPreview.ui \
+    gui/StatusBarWidget.ui \
+    gui/UpdaterDialog.ui
 
 RESOURCES += resources.qrc
 

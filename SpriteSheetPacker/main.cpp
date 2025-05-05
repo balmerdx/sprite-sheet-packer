@@ -1,4 +1,4 @@
-#include "MainWindow.h"
+#include "gui/MainWindow.h"
 #include "SpritePackerProjectFile.h"
 #include <QApplication>
 

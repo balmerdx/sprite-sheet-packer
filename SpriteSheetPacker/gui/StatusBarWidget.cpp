@@ -1,5 +1,5 @@
 #include "StatusBarWidget.h"
-#include "ui_StatusBarWidgetatusbarwidget.h"
+#include "ui_StatusBarWidget.h"
 
 StatusBarWidget::StatusBarWidget(QWidget *parent) :
     QWidget(parent),

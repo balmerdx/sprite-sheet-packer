@@ -10,6 +10,9 @@ public:
     PackContent(const QString& name, const QImage& image);
 
     bool isIdentical(const PackContent& other);
+
+    //При полигональной упаковке собственный trim, который сильно более хороший и адаптивный
+    //Этот надо вызывать позже, после того как полигональный trim почистил мусор.
     void trim(int alpha);
     void setTriangles(const Triangles& triangles) { _triangles = triangles; }
 
