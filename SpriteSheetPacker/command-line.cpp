@@ -301,6 +301,11 @@ int commandLine(QCoreApplication& app) {
 
             QFileInfo destFileInfo(destination.absoluteFilePath(spriteSheetName));
 
+            {
+                QDir dir = destFileInfo.dir();
+                dir.mkpath(".");
+            }
+
             // Generate sprite atlas
             SpriteAtlas atlas(QStringList() << projectFile->srcList(), textureBorder, spriteBorder, trim, heuristicMask, pow2,
                               forceSquared, maxSize, scale, granularity, variant.fixedTextureSize);

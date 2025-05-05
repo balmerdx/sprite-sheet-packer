@@ -1,7 +1,6 @@
 #include "polygon_pack_balmer.h"
-#include "bin_image.h"
 
-PolygonPackContent::PolygonPackContent(const PackContent& content, int border)
+PolygonPackContent::PolygonPackContent(const PackContent& content)
     : _content(content)
     , _area(0)
 {
@@ -31,6 +30,7 @@ PolygonPackContent::PolygonPackContent(const PolygonPackContent& other)
     , _area(other._area)
     , _bounds(other._bounds)
     , _initial_bound(other._initial_bound)
+    , pixel_border(other.pixel_border.clone())
 {
 
 }
@@ -47,6 +47,7 @@ void PolygonPackContent::operator=(PolygonPackContent&& src)
     _area = src._area;
     _bounds = src._bounds;
     _initial_bound = src._initial_bound;
+    pixel_border = std::move(src.pixel_border);
 }
 
 void PolygonPackContent::setOffset(const QPoint& offset) {
@@ -67,19 +68,18 @@ void PolygonPackContent::setOffsetNoMoveTriangle(const QPoint& offset)
     _bounds.moveTo(_bounds.topLeft() + offset);
 }
 
-PolygonPackBalmer::PolygonPackBalmer()
+PolygonPackBalmer::PolygonPackBalmer(bool verbose)
+    : _verbose(verbose)
 {
 }
 
-void PolygonPackBalmer::place(const std::vector<PackContent>& contents, QSize maxTextureSize, QSize granularity)
+void PolygonPackBalmer::place(const std::vector<PackContent>& contents, QSize maxTextureSize, QSize granularity, int border)
 {
-    int border = 0;
     std::vector<PolygonPackContent> src_contents;
     src_contents.reserve(contents.size());
     for(const PackContent& content : contents)
     {
-        //src_contents.push_back(std::move(PolygonPackContent(content)));
-        src_contents.emplace_back(content, border);
+        src_contents.emplace_back(content);
     }
 
     std::sort(src_contents.begin(), src_contents.end(), [](const PolygonPackContent& a, const PolygonPackContent& b)
@@ -95,7 +95,11 @@ void PolygonPackBalmer::place(const std::vector<PackContent>& contents, QSize ma
     int idx = 0;
     for(PolygonPackContent& content : src_contents)
     {
-        AImage cur_aimage(content.triangles().drawTriangles());
+        AImage cur_aimage_no_border(content.triangles().drawTriangles());
+        AImage cur_aimage = cur_aimage_no_border.expandRightBottom(border);
+        content.pixel_border = cur_aimage.clone();
+        content.pixel_border.excludeMask(cur_aimage_no_border);
+
         BinImage cur_image(cur_aimage, granularity.width(), granularity.height());
         BinImageTest cur_image_test(cur_image);
 
@@ -117,7 +121,8 @@ void PolygonPackBalmer::place(const std::vector<PackContent>& contents, QSize ma
                         _bounds |= content.bounds();
                     }
 
-                    qDebug() << idx << "/" << src_contents.size() << ":" << content.content().name();
+                    if(_verbose)
+                        qDebug() << idx << "/" << src_contents.size() << ":" << content.content().name();
                     idx++;
 
                     placed = true;

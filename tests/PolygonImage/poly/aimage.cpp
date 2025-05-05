@@ -21,6 +21,7 @@ AImage::AImage(AImage&& src)
 
 void AImage::operator=(AImage&& d)
 {
+    delete[] _data;
     _width = d._width;
     _height = d._height;
     _data = d._data;
@@ -28,6 +29,13 @@ void AImage::operator=(AImage&& d)
     d._width = 0;
     d._height = 0;
     d._data = nullptr;
+}
+
+AImage AImage::clone() const
+{
+    AImage a(_width, _height);
+    memcpy(a._data, _data, _width * _height * sizeof(_data[0]));
+    return a;
 }
 
 AImage::AImage(int width, int height, uint8_t fill)
@@ -117,6 +125,67 @@ QImage AImage::qgray() const
     return std::move(out);
 }
 
+AImage AImage::expandRightBottom(int border)
+{
+    assert(border >=0 && border < 100);
+    AImage ex_image(_width + border, _height + border);
+
+    for(int iy = 0; iy < _height; iy++)
+    {
+        for(int ix = 0; ix < _width; ix++)
+        {
+            auto v = get(ix, iy);
+            if (!(v > 0))
+                continue;
+            ex_image.set(ix, iy, v);
+
+            //fill right
+            for(int border_idx = 0; border_idx < border; border_idx++)
+            {
+                int x = ix + 1 + border_idx;
+                if(x < _width && get(x, iy) > 0)
+                {
+                    //Встретили непрозрачный пиксель, дальше не надо продолжать.
+                    break;
+                }
+
+                ex_image.set(x, iy, v);
+            }
+
+            //fill bottom
+            for(int border_idx = 0; border_idx < border; border_idx++)
+            {
+                int y = iy + 1 + border_idx;
+                if(y < _height&& get(ix, y) > 0)
+                {
+                    //Встретили непрозрачный пиксель, дальше не надо продолжать.
+                    break;
+                }
+
+                ex_image.set(ix, y, v);
+            }
+        }
+    }
+
+    return std::move(ex_image);
+}
+
+void AImage::excludeMask(const AImage& mask, uint8_t set_value)
+{
+    int xlimit = std::min(width(), mask.width());
+    int ylimit = std::min(height(), mask.height());
+    for(int y = 0; y < ylimit; y++)
+    {
+        for (int x = 0; x < xlimit; x++)
+        {
+            if(mask.get(x,y) > 0)
+            {
+                set(x, y, set_value);
+            }
+        }
+    }
+}
+
 /////////////////
 AImage32::AImage32()
 {
@@ -134,6 +203,7 @@ AImage32::AImage32(AImage32&& src)
 
 void AImage32::operator=(AImage32&& d)
 {
+    delete[] _data;
     _width = d._width;
     _height = d._height;
     _data = d._data;
@@ -143,13 +213,20 @@ void AImage32::operator=(AImage32&& d)
     d._data = nullptr;
 }
 
-AImage32::AImage32(int width, int height, uint8_t fill)
+AImage32 AImage32::clone() const
+{
+    AImage32 a(_width, _height);
+    memcpy(a._data, _data, _width * _height * sizeof(_data[0]));
+    return a;
+}
+
+
+AImage32::AImage32(int width, int height, uint32_t fill)
 {
     _width = width;
     _height = height;
     _data = new uint32_t[_width*_height];
     std::fill_n(_data, _width*_height, fill);
-    //memset(_data, fill, _width*_height);
 }
 
 uint32_t AImage32::get(int x, int y) const

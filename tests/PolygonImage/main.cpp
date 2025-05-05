@@ -2,12 +2,31 @@
 
 #include <QApplication>
 #include "atlas_stats.h"
+#include "aimage.h"
 #include <locale.h>
+
+AImage copyImage()
+{
+    AImage a(12, 12);
+    a.set(1,2,3);
+    return a;
+}
 
 int main(int argc, char *argv[])
 {
     setlocale(LC_NUMERIC, "C");
     QApplication a(argc, argv);
+
+    if(1)
+    {
+        AImage b;
+        b = std::move(copyImage());
+
+        AImage c;
+        c = b.clone();
+
+        return 0;
+    }
 
     if(0)
     {

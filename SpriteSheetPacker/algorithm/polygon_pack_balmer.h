@@ -1,9 +1,11 @@
 #pragma once
 #include "pack_content.h"
+#include "bin_image.h"
+
 
 class PolygonPackContent {
 public:
-    PolygonPackContent(const PackContent& content, int border = 0);
+    explicit PolygonPackContent(const PackContent& content);
     PolygonPackContent(const PolygonPackContent& other);
     PolygonPackContent(PolygonPackContent&& other);
     void operator=(PolygonPackContent&&);
@@ -18,6 +20,8 @@ public:
     void setOffset(const QPoint& offset);
     void setOffsetNoMoveTriangle(const QPoint& offset);
 
+    //Тестовое изображение. В нём ненулевые пикаели - это border
+    AImage pixel_border;
 protected:
     PackContent _content;
     QPoint _offset;
@@ -30,14 +34,15 @@ protected:
 class PolygonPackBalmer
 {
 public:
-    PolygonPackBalmer();
+    PolygonPackBalmer(bool verbose);
 
-    void place(const std::vector<PackContent>& contents, QSize maxTextureSize, QSize granularity);
+    void place(const std::vector<PackContent>& contents, QSize maxTextureSize, QSize granularity, int border);
 
     const std::vector<PolygonPackContent>& contentList() const { return _contentList; }
     QRect bounds() const { return _bounds; }
 protected:
     QRect _bounds;
     std::vector<PolygonPackContent> _contentList;
+    bool _verbose;
 };
 

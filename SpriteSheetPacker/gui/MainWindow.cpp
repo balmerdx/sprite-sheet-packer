@@ -1185,7 +1185,7 @@ void MainWindow::onRefreshAtlasStarted() {
 }
 
 void MainWindow::onRefreshAtlasCompleted() {
-    qDebug() << "onRefreshAtlasCompleted";
+    //qDebug() << "onRefreshAtlasCompleted";
     _statusBarWidget->hideSpinner();
     _statusBarWidget->showMessage("Finished.", QPixmap("://res/icon-ok.png"));
 

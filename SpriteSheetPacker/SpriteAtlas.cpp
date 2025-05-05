@@ -110,7 +110,8 @@ bool SpriteAtlas::generate(SpriteAtlasGenerateProgress* progress) {
         // Trim / Crop
         if (_trim) {
             if (_polygonMode.enable) {
-                qDebug() << (*it_f).first;
+                if (verbose)
+                    qDebug() << (*it_f).first;
                 PolygonImage2 polygonImage(packContent.image(), packContent.rect(), _polygonMode.epsilon, _trim);
                 //packContent.setPolygons(polygonImage.polygons());
                 packContent.setTriangles(polygonImage.triangles());
@@ -614,9 +615,9 @@ bool SpriteAtlas::packWithPolygon(const QVector<PackContent>& content) {
 
     std::vector<PackContent> contents_std;
     contents_std.insert(contents_std.end(), content.begin(), content.end());
-    PolygonPackBalmer polygon_pack;
+    PolygonPackBalmer polygon_pack(verbose);
     QSize granularity(4,4);
-    polygon_pack.place(contents_std, _maxTextureSize, granularity);
+    polygon_pack.place(contents_std, _maxTextureSize, granularity, _spriteBorder);
 
     auto outputContent = polygon_pack.contentList();
 
@@ -652,8 +653,23 @@ bool SpriteAtlas::packWithPolygon(const QVector<PackContent>& content) {
         }
     };
 
+    auto copy_border = [](QImage& dst, const AImage& src, QPoint pos)
+    {
+        int xoffset = pos.x();
+        int yoffset = pos.y();
+        QRgb color = qRgb(255, 0, 255);
 
-    //_textureBorder - пока не сделано, надо другими методами это делать, внутри polygon_pack
+        for(int y=0; y<src.height(); y++)
+        {
+            for(int x=0; x<src.width(); x++)
+            {
+                if (src.get(x, y) && x + xoffset < dst.width() && y + yoffset < dst.height())
+                    dst.setPixel(x + xoffset, y + yoffset, color);
+            }
+        }
+    };
+
+
     for(auto& content : outputContent) {
         if (_aborted) return false;
 
@@ -662,7 +678,7 @@ bool SpriteAtlas::packWithPolygon(const QVector<PackContent>& content) {
         SpriteFrameInfo spriteFrame;
 
         spriteFrame.triangles = packContent.triangles();
-        spriteFrame.frame = QRect(QPoint(content.bounds().left() + _textureBorder, content.bounds().top() + _textureBorder), QPoint(content.bounds().right(), content.bounds().bottom()));
+        spriteFrame.frame = content.bounds();
         spriteFrame.offset = QPoint(
             content.initial_bound().left(),
             content.initial_bound().top()
@@ -672,8 +688,11 @@ bool SpriteAtlas::packWithPolygon(const QVector<PackContent>& content) {
         spriteFrame.sourceSize = packContent.image().size();
 
         copy_rect(outputData._atlasImage, packContent.image(),
-                  QPoint(content.bounds().left() + _textureBorder, content.bounds().top() + _textureBorder),
+                  content.bounds().topLeft(),
                   content.initial_bound(), _trim);
+
+        //test code. Рисуем бордюр на атлас.
+        copy_border(outputData._atlasImage, content.pixel_border, content.bounds().topLeft());
 
         outputData._spriteFrames[packContent.name()] = spriteFrame;
 
