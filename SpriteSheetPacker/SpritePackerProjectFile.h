@@ -103,6 +103,10 @@ public:
         return _factory;
     }
 
+    //Список изображений, которые не пакуются полигонально.
+    //У них полигон будет прямоугольником
+    const QStringList& getTrimRectList() const { return _trimRectListFiles; }
+
 protected:
     QString     _algorithm;
     QString     _trimMode;
@@ -134,8 +138,12 @@ protected:
     QString     _encryptionKey;
 
     QSize _granularity = QSize(1,1);
+    QStringList _trimRectListFiles;
+    QString _trimRectList;
 private:
     static GenericObjectFactory<std::string, SpritePackerProjectFile> _factory;
+
+    bool loadTrimRectList(QDir dir, QString trimRectList);
 };
 
 class SpritePackerProjectFileTPS: public SpritePackerProjectFile {

@@ -31,6 +31,7 @@ PolygonPackContent::PolygonPackContent(const PolygonPackContent& other)
     , _bounds(other._bounds)
     , _initial_bound(other._initial_bound)
     , pixel_border(other.pixel_border.clone())
+    , mask(other.mask.clone())
 {
 
 }
@@ -48,6 +49,7 @@ void PolygonPackContent::operator=(PolygonPackContent&& src)
     _bounds = src._bounds;
     _initial_bound = src._initial_bound;
     pixel_border = std::move(src.pixel_border);
+    mask = std::move(src.mask);
 }
 
 void PolygonPackContent::setOffset(const QPoint& offset) {
@@ -102,6 +104,8 @@ void PolygonPackBalmer::place(const std::vector<PackContent>& contents, QSize ma
 
         BinImage cur_image(cur_aimage, granularity.width(), granularity.height());
         BinImageTest cur_image_test(cur_image);
+
+        content.mask = cur_image.clone();
 
         bool placed = false;
         for(int y=0; y<big_image.height() - cur_image.height(); y++)

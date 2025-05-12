@@ -49,6 +49,7 @@ signals:
 
 protected:
     bool generateDataFile(const QString& filePath, const QString& format, const QMap<QString, SpriteFrameInfo>& spriteFrames, const QImage& atlasImage, bool errorMessage = true);
+    bool generateDataFileBinMask(const QString& filePath, const QMap<QString, SpriteFrameInfo>& spriteFrames);
     bool optimizePNG(const QString& fileName, const QString& optMode, int optLevel);
     void optimizePNGInThread(QStringList fileNames, const QString& optMode, int optLevel);
 

@@ -3,8 +3,8 @@
 
 #include <QtCore>
 #include <QImage>
+#include <QJsonObject>
 
-#include "PolygonImage.h"
 #include "pack_content.h"
 
 struct SpriteFrameInfo {
@@ -16,6 +16,11 @@ public:
     QSize   sourceSize;
 
     Triangles triangles;
+
+    //Бинарная маска, помогающая потом создавать astc изображения
+    //Каждый её бит отвечает за область granularityX, granularityY
+    //Она ответственна уже за обрезанное изображение, начинающееся с SpriteFrameInfo::offset
+    QJsonObject polygon_mask;
 };
 
 class SpriteAtlasGenerateProgress: public QObject
@@ -51,7 +56,8 @@ public:
 
        Предполагаем, что textureBorder=0, trim = 0, иначе кривовато работать будет
     */
-    SpriteAtlas(const QStringList& sourceList = QStringList(),
+    SpriteAtlas(const QStringList& sourceList,
+                const QStringList& trimRectListFiles,
                 int textureBorder = 0,
                 int spriteBorder = 1,
                 int trim = 1,
@@ -98,6 +104,7 @@ protected:
 private:
     QStringList _sourceList;
     QString _algorithm = "Rect";
+    QSet<QString> _trimRectListFiles;
     int _trim;
     int _textureBorder;
     int _spriteBorder;

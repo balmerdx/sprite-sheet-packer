@@ -31,10 +31,9 @@ static void addTriangles(Triangles& triangles, const std::vector<p2t::Triangle*>
 
 }
 
-PolygonImage2::PolygonImage2(const QImage& image, const QRectF& rect, const float epsilon, const float threshold)
+PolygonImage2::PolygonImage2(const QImage& image, const QRectF& rect, bool packToRect)
     : _width(image.width())
     , _height(image.height())
-    , _threshold(threshold)
 {
     _image = image.convertToFormat(QImage::Format_RGBA8888)
                  .copy(lroundf(rect.left()), lroundf(rect.top()), lroundf(rect.width()), lroundf(rect.height()));
@@ -56,6 +55,7 @@ PolygonImage2::PolygonImage2(const QImage& image, const QRectF& rect, const floa
     };
 
     OptimizeByClipper op;
+    op._params.pack_to_rect = packToRect;
     op.optimize(ib.elems);
 
     for(const ImageBorderElem& elem : op.result)

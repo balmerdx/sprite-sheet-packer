@@ -1,13 +1,12 @@
 #include "SpriteAtlas.h"
 
 #include <functional>
-#include "binpack2d.hpp"
-#include "polypack2d.h"
 #include "ImageRotate.h"
-//#include "PolygonImage.h"
+#include "binpack2d.hpp"
 #include "PolygonImage2.h"
 #include "ImageFillOuter.h"
 #include "ElapsedTimer.h"
+#include "polygon_pack_balmer.h"
 
 int pow2(int len) {
     int order = 1;
@@ -18,7 +17,7 @@ int pow2(int len) {
     return pow(2,order);
 }
 
-SpriteAtlas::SpriteAtlas(const QStringList& sourceList, int textureBorder, int spriteBorder, int trim, bool heuristicMask, bool pow2, bool forceSquared,
+SpriteAtlas::SpriteAtlas(const QStringList& sourceList, const QStringList &trimRectListFiles, int textureBorder, int spriteBorder, int trim, bool heuristicMask, bool pow2, bool forceSquared,
                          QSize maxSize, float scale, QSize granularity, QSize fixedTextureSize)
     : _sourceList(sourceList)
     , _trim(trim)
@@ -33,6 +32,7 @@ SpriteAtlas::SpriteAtlas(const QStringList& sourceList, int textureBorder, int s
     , _granularity(granularity)
 {
     _polygonMode.enable = false;
+    _trimRectListFiles = QSet<QString>(trimRectListFiles.begin(), trimRectListFiles.end());
 }
 
 void SpriteAtlas::enablePolygonMode(bool enable, float epsilon) {
@@ -110,9 +110,10 @@ bool SpriteAtlas::generate(SpriteAtlasGenerateProgress* progress) {
         // Trim / Crop
         if (_trim) {
             if (_polygonMode.enable) {
+                bool packToRect = _trimRectListFiles.contains((*it_f).first);
                 if (verbose)
-                    qDebug() << (*it_f).first;
-                PolygonImage2 polygonImage(packContent.image(), packContent.rect(), _polygonMode.epsilon, _trim);
+                    qDebug() << (*it_f).first << "packToRect ="<<packToRect;
+                PolygonImage2 polygonImage(packContent.image(), packContent.rect(), packToRect);
                 //packContent.setPolygons(polygonImage.polygons());
                 packContent.setTriangles(polygonImage.triangles());
                 /* test code
@@ -605,10 +606,6 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
     return true;
 }
 
-#define NEW_PACK_WITH_POLYGON
-#ifdef NEW_PACK_WITH_POLYGON
-
-#include "polygon_pack_balmer.h"
 bool SpriteAtlas::packWithPolygon(const QVector<PackContent>& content) {
     if (_progress)
         _progress->setProgressText("Build pack contents...");
@@ -679,20 +676,18 @@ bool SpriteAtlas::packWithPolygon(const QVector<PackContent>& content) {
 
         spriteFrame.triangles = packContent.triangles();
         spriteFrame.frame = content.bounds();
-        spriteFrame.offset = QPoint(
-            content.initial_bound().left(),
-            content.initial_bound().top()
-            );
+        spriteFrame.offset = content.initial_bound().topLeft();
         spriteFrame.rotated = false;
         spriteFrame.sourceColorRect = packContent.rect();
         spriteFrame.sourceSize = packContent.image().size();
+        spriteFrame.polygon_mask = content.mask.toJson();
 
         copy_rect(outputData._atlasImage, packContent.image(),
                   content.bounds().topLeft(),
                   content.initial_bound(), _trim);
 
         //test code. Рисуем бордюр на атлас.
-        copy_border(outputData._atlasImage, content.pixel_border, content.bounds().topLeft());
+        //copy_border(outputData._atlasImage, content.pixel_border, content.bounds().topLeft());
 
         outputData._spriteFrames[packContent.name()] = spriteFrame;
 
@@ -713,112 +708,6 @@ bool SpriteAtlas::packWithPolygon(const QVector<PackContent>& content) {
 
     return true;
 }
-#else
-bool SpriteAtlas::packWithPolygon(const QVector<PackContent>& content) {
-    if (_progress)
-        _progress->setProgressText("Build pack contents...");
-
-    // initialize content
-    PolyPack2D::ContentList<PackContent> inputContent;
-    for (auto packContent: content) {
-        //TODO: remove convert
-        PolyPack2D::Triangles triangles;
-        for (auto vert: packContent.triangles().verts) {
-            triangles.verts.push_back(PolyPack2D::Point(vert.x(), vert.y()));
-        }
-        //triangles.indices = packContent.triangles().indices.toStdVector();
-        triangles.indices.clear();
-        triangles.indices.insert(triangles.indices.end(), packContent.triangles().indices.begin(), packContent.triangles().indices.end());
-
-        inputContent += PolyPack2D::Content<PackContent>(packContent, triangles, _spriteBorder);
-    }
-
-    // Sort the input content by area... usually packs better.
-    inputContent.sort();
-
-    for (auto it = inputContent.begin(); it != inputContent.end(); ++it) {
-        qDebug() << (*it).content().name() << (*it).area();
-    }
-
-    PolyPack2D::Container<PackContent> container;
-    // TODO: abort this place if _aborted
-    container.place(inputContent, _maxTextureSize, 5, std::bind(&SpriteAtlas::onPlaceCallback, this, std::placeholders::_1, std::placeholders::_2));
-
-    auto outputContent = container.contentList();
-
-    OutputData outputData;
-
-    outputData._atlasImage = QImage(container.bounds().width() + _textureBorder * 2, container.bounds().height() + _textureBorder * 2, QImage::Format_RGBA8888);
-    outputData._atlasImage.fill(QColor(0, 0, 0, 0));
-
-    //Копируем попиксельно, только достаточно непрозрачные пиксели (>_trim)
-    auto copy_rect = [](QImage& dst, const QImage& src, QPoint pos, QRect src_rect, int trim_alpha)
-    {
-        int xmin = src_rect.left();
-        int ymin = src_rect.top();
-        int xmax = src_rect.right();
-        int ymax = src_rect.bottom();
-
-        xmin = std::max(0, xmin);
-        xmax = std::min(src.width(), xmax);
-        ymin = std::max(0, ymin);
-        ymax = std::min(src.height(), ymax);
-
-        int xoffset = pos.x() - src_rect.left();
-        int yoffset = pos.y() - src_rect.top();
-
-        for(int y=ymin; y<ymax; y++)
-        {
-            for(int x=xmin; x<xmax; x++)
-            {
-                QRgb rgb = src.pixel(x, y);
-                if (qAlpha(rgb) > trim_alpha)
-                    dst.setPixel(x + xoffset, y + yoffset, rgb);
-            }
-        }
-    };
-
-    for(auto itor = outputContent.begin(); itor != outputContent.end(); itor++ ) {
-        if (_aborted) return false;
-
-        const PolyPack2D::Content<PackContent> &content = *itor;
-
-        // retreive your data.
-        const PackContent &packContent = content.content();
-        SpriteFrameInfo spriteFrame;
-
-        spriteFrame.triangles = packContent.triangles();
-        spriteFrame.frame = QRect(QPoint(content.bounds().left + _textureBorder, content.bounds().top + _textureBorder), QPoint(content.bounds().right, content.bounds().bottom));
-        spriteFrame.offset = QPoint(
-            packContent.rect().left(),
-            packContent.rect().top()
-            );
-        spriteFrame.rotated = false;
-        spriteFrame.sourceColorRect = packContent.rect();
-        spriteFrame.sourceSize = packContent.image().size();
-
-        copy_rect(outputData._atlasImage, packContent.image(), QPoint(content.bounds().left + _textureBorder, content.bounds().top + _textureBorder), packContent.rect(), _trim);
-
-        outputData._spriteFrames[packContent.name()] = spriteFrame;
-
-        // add ident to sprite frames
-        auto identicalIt = _identicalFrames.find(packContent.name());
-        if (identicalIt != _identicalFrames.end()) {
-            QStringList identicalList;
-            for (auto ident: (*identicalIt)) {
-            outputData._spriteFrames[ident] = spriteFrame;
-
-            identicalList.push_back(ident);
-            }
-        }
-    }
-
-
-    _outputData.push_front(outputData);
-
-    return true;
-}
-#endif
 
 void SpriteAtlas::onPlaceCallback(int current, int count) {
     if (_progress)

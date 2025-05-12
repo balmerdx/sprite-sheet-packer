@@ -20,8 +20,11 @@ public:
     void setOffset(const QPoint& offset);
     void setOffsetNoMoveTriangle(const QPoint& offset);
 
-    //Тестовое изображение. В нём ненулевые пикаели - это border
+    //Тестовое изображение. В нём ненулевые пикcели - это border
     AImage pixel_border;
+
+    //Маска изображения, каждый бит отвечает за granularity область
+    BinImage mask;
 protected:
     PackContent _content;
     QPoint _offset;

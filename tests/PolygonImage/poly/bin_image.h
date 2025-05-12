@@ -1,5 +1,7 @@
 #pragma once
 #include "aimage.h"
+#include <QJsonObject>
+#include <QJsonArray>
 
 /*
    Изображение битовая маска, 1 бит на пиксель.
@@ -28,6 +30,7 @@ public:
     BinImage(const BinImage&) = delete;
     BinImage& operator= (const BinImage&) = delete;
     void operator=(BinImage&&);
+    BinImage clone() const;
 
     int width() const { return _width; }
     int height() const { return _height; }
@@ -41,6 +44,8 @@ public:
     void set(int x, int y, bool value);
 
     QImage qimage(QRgb color_white = qRgb(0xFF, 0xFF, 0xFF), QRgb color_black = qRgb(0, 0, 0)) const;
+
+    QJsonObject toJson();
 protected:
     int calcStride(int width, bool zero_at_end);
     void init(int width, int height, bool zero_at_end);

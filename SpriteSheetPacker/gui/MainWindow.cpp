@@ -245,6 +245,7 @@ void MainWindow::refreshAtlas(bool generate) {
                     bool forceSquared = scalingVariantWidget->forceSquared();
 
                     SpriteAtlas atlas = SpriteAtlas(_spritesTreeWidget->contentList(),
+                                                    QStringList(),
                                                     ui->textureBorderSpinBox->value(),
                                                     ui->spriteBorderSpinBox->value(),
                                                     ui->trimSpinBox->value(),
@@ -709,6 +710,7 @@ void MainWindow::on_actionPublish_triggered() {
                 publishStatusDialog.log(QString("Generating scale variant (%1) scale: %2.").arg(spriteSheetName).arg(scale));
 
                 SpriteAtlas atlas(_spritesTreeWidget->contentList(),
+                                  QStringList(),
                                   ui->textureBorderSpinBox->value(),
                                   ui->spriteBorderSpinBox->value(),
                                   ui->trimSpinBox->value(),

@@ -223,6 +223,14 @@ void OptimizeByClipper::optimize(const std::vector<ImageBorderElem>& elems_doubl
 
 
     ImageBorderInt out;
+
+    if(_params.pack_to_rect)
+    {
+        out.border =  boundBox(unsorted_border);
+        result.push_back(std::move(out.to()));
+        return;
+    }
+
     out.border =  optimizeUnsorted(unsorted_border);
     out.border = optimizeСoncaveSurface(out.border);
 

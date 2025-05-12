@@ -307,7 +307,8 @@ int commandLine(QCoreApplication& app) {
             }
 
             // Generate sprite atlas
-            SpriteAtlas atlas(QStringList() << projectFile->srcList(), textureBorder, spriteBorder, trim, heuristicMask, pow2,
+            SpriteAtlas atlas(QStringList() << projectFile->srcList(), projectFile->getTrimRectList(),
+                              textureBorder, spriteBorder, trim, heuristicMask, pow2,
                               forceSquared, maxSize, scale, granularity, variant.fixedTextureSize);
             atlas.setRotateSprites(rotateSprites, projectFile->rotateSpritesCw());
             atlas.enableFindIdentical(enableFindIdentical);
@@ -334,7 +335,7 @@ int commandLine(QCoreApplication& app) {
         projectFile = nullptr;
     } else {
         // Generate sprite atlas
-        SpriteAtlas atlas(QStringList() << source.filePath(), textureBorder, spriteBorder, trim, heuristicMask, pow2,
+        SpriteAtlas atlas(QStringList() << source.filePath(), QStringList(), textureBorder, spriteBorder, trim, heuristicMask, pow2,
                           forceSquared, maxSize, imageScale, granularity);
         //!!Возможно вращение в неверную сторону!!
         atlas.setRotateSprites(rotateSprites, true);

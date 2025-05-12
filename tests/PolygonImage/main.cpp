@@ -2,13 +2,15 @@
 
 #include <QApplication>
 #include "atlas_stats.h"
-#include "aimage.h"
+#include "bin_image.h"
 #include <locale.h>
 
 AImage copyImage()
 {
-    AImage a(12, 12);
+    AImage a(64, 12);
     a.set(1,2,3);
+    for(int x=0; x<63; x++)
+        a.set(x, 3, 128);
     return a;
 }
 
@@ -24,6 +26,10 @@ int main(int argc, char *argv[])
 
         AImage c;
         c = b.clone();
+
+        BinImage bin(b, 1, 1);
+
+        qDebug() << bin.toJson();
 
         return 0;
     }

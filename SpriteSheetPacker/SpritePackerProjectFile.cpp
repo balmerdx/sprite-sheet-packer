@@ -120,6 +120,16 @@ bool SpritePackerProjectFile::read(const QString &fileName) {
     if (json.contains("granularityX")) _granularity.setWidth(json["granularityX"].toInt());
     if (json.contains("granularityY")) _granularity.setHeight(json["granularityY"].toInt());
 
+    if (json.contains("trimRectList"))
+    {
+        _trimRectList = json["trimRectList"].toString();
+        if (!_trimRectList.isEmpty())
+        {
+            if(!loadTrimRectList(dir, _trimRectList))
+                return false;
+        }
+    }
+
     return true;
 }
 
@@ -172,6 +182,8 @@ bool SpritePackerProjectFile::write(const QString &fileName) {
         json["granularityX"] = _granularity.width();
     if (_granularity.height() != 1)
         json["granularityY"] = _granularity.height();
+    if (!_trimRectList.isEmpty())
+        json["trimRectList"] = _trimRectList;
 
     QFile file(fileName);
     file.open(QIODevice::WriteOnly | QIODevice::Text);
@@ -333,5 +345,40 @@ bool SpritePackerProjectFile::rotateSpritesCwStatic(const QString& dataFormat)
 {
     if(dataFormat == "spine-atlas")
         return false;
+    return true;
+}
+
+bool SpritePackerProjectFile::loadTrimRectList(QDir dir, QString trimRectList)
+{
+    _trimRectListFiles.clear();
+    QString filenameList = dir.absoluteFilePath(trimRectList);
+    QFile inputFile(filenameList);
+    if (!inputFile.open(QIODevice::ReadOnly))
+    {
+        qCritical() << "Cannot open " << filenameList;
+        return false;
+    }
+    {
+        QTextStream in(&inputFile);
+        while (!in.atEnd())
+        {
+            QString line = in.readLine();
+            if(line.isEmpty())
+                continue;
+            QString filename = dir.absoluteFilePath(line);
+            QFileInfo fi(filename);
+            if (!fi.exists())
+            {
+                qDebug() << "loadTrimRectList: File not found :" << filename;
+                continue;
+            }
+
+            filename = filename.replace('\\', '/');
+
+            _trimRectListFiles.push_back(filename);
+        }
+        inputFile.close();
+    }
+
     return true;
 }

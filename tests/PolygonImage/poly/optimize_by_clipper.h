@@ -51,10 +51,15 @@ public:
         //Количество вершин в дыре в полигоне
         //скорее всего не потребуется менять никогда
         int points_in_hole = 8;
+
+        //pack_to_rect=true мы не пакуем, просто ограничиваем прямоугольником и всё.
+        bool pack_to_rect = false;
     };
 
     OptimizeByClipper();
     ~OptimizeByClipper();
+
+    Parameters _params;
 
     void optimize(const std::vector<ImageBorderElem>& elems_double);
 
@@ -82,6 +87,5 @@ protected:
     double min_factor(double delta_points, double delta_area);
 protected:
     //Изначальная граница, требуется для тестирования всякого
-    Parameters _params;
     std::vector<ImageBorderInt> original_elems;
 };

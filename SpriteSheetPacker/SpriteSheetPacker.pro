@@ -47,9 +47,7 @@ SOURCES += main.cpp \
     SpritePackerProjectFile.cpp \
     PngOptimizer.cpp \
     PublishSpriteSheet.cpp \
-    algorithm/polygon_pack_balmer.cpp \
     command-line.cpp \
-    PolygonImage.cpp \
     ElapsedTimer.cpp \
     pack_content.cpp \
     triangles.cpp
@@ -74,21 +72,21 @@ HEADERS += \
     SpritePackerProjectFile.h \
     PngOptimizer.h \
     PublishSpriteSheet.h \
-    PolygonImage.h \
     ImageFormat.h \
     ElapsedTimer.h \
-    algorithm/polygon_pack_balmer.h \
     pack_content.h \
     triangles.h
 
 #algorithm
 INCLUDEPATH += algorithm
 
-HEADERS += algorithm/binpack2d.hpp \
-    algorithm/triangle_triangle_intersection.h \
-    algorithm/polypack2d.h
+HEADERS += \
+    algorithm/binpack2d.hpp \
+    algorithm/polygon_pack_balmer.h
 
-SOURCES += algorithm/polypack2d.cpp
+SOURCES += \
+    algorithm/polygon_pack_balmer.cpp
+
 
 
 #other...

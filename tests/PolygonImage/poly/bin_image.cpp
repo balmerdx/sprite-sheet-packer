@@ -27,6 +27,17 @@ void BinImage::operator=(BinImage&& d)
     d._data = nullptr;
 }
 
+BinImage BinImage::clone() const
+{
+    BinImage out;
+    out._width = _width;
+    out._height = _height;
+    out._stride = _stride;
+    out._data = new uint64_t[_stride * _height];
+    memcpy(out._data, _data, _stride * _height * sizeof(_data[0]));
+    return out;
+}
+
 
 BinImage::BinImage(int width, int height, bool zero_at_end)
 {
@@ -216,8 +227,8 @@ bool BinImageTest::test(const BinImage& big_image, int x, int y)
 
         for(int ix = 0; ix < x_size; ix++)
         {
-            auto bs = big_start_tmp[ix];
-            auto ms = mask_start[ix];
+            //auto bs = big_start_tmp[ix];
+            //auto ms = mask_start[ix];
             if (big_start_tmp[ix] & mask_start[ix])
             {
                 return false;
@@ -253,4 +264,24 @@ void BinImageTest::place(BinImage& big_image, int x, int y)
             big_start_tmp[ix] |= mask_start[ix];
         }
     }
+}
+
+QJsonObject BinImage::toJson()
+{
+    QJsonArray arr;
+    for(int y = 0; y < _height; y++)
+    {
+        const int bytes_per_elem = sizeof(_data[0])*8;
+        int elems = (_width + bytes_per_elem - 1) / bytes_per_elem;
+        for(int x = 0; x < elems; x++ )
+        {
+            arr.push_back((qint64)(_data[x + y*_stride]));
+        }
+    }
+
+    QJsonObject out;
+    out.insert("width", _width);
+    out.insert("height", _height);
+    out.insert("data", arr);
+    return out;
 }

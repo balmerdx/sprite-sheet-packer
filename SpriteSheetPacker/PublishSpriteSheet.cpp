@@ -194,6 +194,14 @@ bool PublishSpriteSheet::publish(const QString& format, bool errorMessage) {
                 return false;
             }
 
+            //test code
+            {
+                QFileInfo outputFilePathInfo(outputFilePath);
+                QString outputFilePathBinMask = outputFilePathInfo.dir().filePath(outputFilePathInfo.completeBaseName()+".mask.json");
+                if (!generateDataFileBinMask(outputFilePathBinMask, outputData._spriteFrames))
+                    return false;
+            }
+
             // save image
             QString fileName = outputFilePath + imagePrefix(_imageFormat);
             QFile(fileName).remove();
@@ -493,4 +501,32 @@ bool PublishSpriteSheet::notFitInOneTexture() const
             return true;
     }
     return false;
+}
+
+bool PublishSpriteSheet::generateDataFileBinMask(const QString& filePath, const QMap<QString, SpriteFrameInfo>& spriteFrames)
+{
+    QJsonObject jsonData;
+    for(auto it = spriteFrames.begin(); it != spriteFrames.end(); it++)
+    {
+        QJsonObject jsonFrame;
+        jsonFrame.insert("offset", QJsonObject { {"x" , it->offset.x()}, {"y" , it->offset.y()} });
+        jsonFrame.insert("frame", QJsonObject { {"x" , it->frame.left()}, {"y" , it->frame.top()}, {"w" , it->frame.width()}, {"h" , it->frame.height()} });
+        jsonFrame.insert("mask", it->polygon_mask);
+        jsonData.insert(it.key(), jsonFrame);
+    }
+
+
+    QFile file(filePath);
+    file.open(QIODevice::WriteOnly | QIODevice::Text);
+    if (!file.isOpen())
+    {
+        qDebug() << "Cannot save file :" << filePath;
+        return false;
+    }
+
+    QJsonDocument jsonDoc(jsonData);
+
+    QTextStream out(&file);
+    out << jsonDoc.toJson(QJsonDocument::Compact);
+    return file.error() == QFileDevice::NoError;
 }
