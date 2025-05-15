@@ -107,6 +107,13 @@ public:
     //У них полигон будет прямоугольником
     const QStringList& getTrimRectList() const { return _trimRectListFiles; }
 
+    /*
+       Функция, которая читает из файла listFilename находящегося в директории dir список файлов.
+       Имена файлов являются относительными и начинаются с dir.
+       Если такой файл не найден, то он игнорируется и пишется в лог.
+       Разделители частей пути в unix style.
+    */
+    static bool loadFilesList(QDir dir, QString listFilename, QString tag, QStringList& filesList);
 protected:
     QString     _algorithm;
     QString     _trimMode;

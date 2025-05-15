@@ -13,7 +13,9 @@ public:
     void start();
     void start(int msec);
 
-    int elapsed();
+    //return seconds
+    double elapsed_sec();
+    int elapsed_us();
 
 signals:
     void timeout(int elapsed);

@@ -36,10 +36,12 @@ public:
     void setTrimSpriteNames(bool trimSpriteNames) { _trimSpriteNames = trimSpriteNames; }
     void setPrependSmartFolderName(bool prependSmartFolderName) { _prependSmartFolderName = prependSmartFolderName; }
     void setEncryptionKey(const QString& key) { _encryptionKey = key; }
+    void setEnableSaveImage(bool e) { _enableSaveImage = e; }
 
     bool publish(const QString& format, bool errorMessage = true);
 
     bool notFitInOneTexture() const;
+
 
     static void addFormat(const QString& format, const QString& scriptFileName) { _formats[format] = scriptFileName; }
     static QMap<QString, QString>& formats() { return _formats; }
@@ -53,6 +55,7 @@ protected:
     bool optimizePNG(const QString& fileName, const QString& optMode, int optLevel);
     void optimizePNGInThread(QStringList fileNames, const QString& optMode, int optLevel);
 
+    bool saveImage(const QString& outputFilePath, const QImage& atlasImage);
 protected:
     QFutureWatcher<bool> _watcher;
     QMutex _mutex;
@@ -60,20 +63,21 @@ protected:
     QList<SpriteAtlas> _spriteAtlases;
     QStringList _fileNames;
 
-    ImageFormat _imageFormat;
-    PixelFormat _pixelFormat;
-    bool        _premultiplied;
+    ImageFormat _imageFormat = kPNG;
+    PixelFormat _pixelFormat = kARGB8888;
+    bool        _premultiplied = true;
 
     struct {
         QString optMode;
         int     optLevel;
     } _pngQuality;
 
-    int         _webpQuality;
-    int         _jpgQuality;
+    int _webpQuality = 80;
+    int _jpgQuality = 80;
 
-    bool        _trimSpriteNames;
-    bool        _prependSmartFolderName;
+    bool _trimSpriteNames = true;
+    bool _prependSmartFolderName = true;
+    bool _enableSaveImage = true;
 
     QString     _encryptionKey;
 

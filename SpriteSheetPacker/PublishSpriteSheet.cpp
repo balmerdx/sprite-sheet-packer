@@ -148,14 +148,6 @@ void JSConsole::log(QString msg) {
 
 
 PublishSpriteSheet::PublishSpriteSheet() {
-    _imageFormat = kPNG;
-    _pixelFormat = kARGB8888;
-    _premultiplied = true;
-    _webpQuality = 80;
-    _jpgQuality = 80;
-
-    _trimSpriteNames = true;
-    _prependSmartFolderName = true;
 }
 
 void PublishSpriteSheet::addSpriteSheet(const SpriteAtlas &atlas, const QString &fileName) {
@@ -195,6 +187,7 @@ bool PublishSpriteSheet::publish(const QString& format, bool errorMessage) {
             }
 
             //test code
+            if (false)
             {
                 QFileInfo outputFilePathInfo(outputFilePath);
                 QString outputFilePathBinMask = outputFilePathInfo.dir().filePath(outputFilePathInfo.completeBaseName()+".mask.json");
@@ -203,139 +196,151 @@ bool PublishSpriteSheet::publish(const QString& format, bool errorMessage) {
             }
 
             // save image
-            QString fileName = outputFilePath + imagePrefix(_imageFormat);
-            QFile(fileName).remove();
-            if(verbose)
-                qDebug() << "Save image:" << fileName;
-            if ((_imageFormat == kPNG) || (_imageFormat == kWEBP) || (_imageFormat == kJPG) || (_imageFormat == kJPG_PNG)) {
-                QImage image = convertImage(outputData._atlasImage, _pixelFormat, _premultiplied);
-                if (_imageFormat == kPNG) {
-                    QImageWriter writer(outputFilePath + imagePrefix(kPNG), "png");
-                    writer.setOptimizedWrite(true);
-                    writer.setCompression(_pngQuality.optLevel * 10);
-                    writer.setQuality(0);
-                    //QTime start = QTime::currentTime();
-                    writer.write(image);
-                    //QTime finish = QTime::currentTime();
-                    //qDebug() << "Save png time:" << start.msecsTo(finish) << "ms";
-                } else if (_imageFormat == kWEBP) {
-                    QImageWriter writer(outputFilePath + imagePrefix(kWEBP), "webp");
-                    writer.setOptimizedWrite(true);
-                    writer.setCompression(100);
-                    writer.setQuality(_webpQuality);
-                    writer.write(image);
-                } else if ((_imageFormat == kJPG) || (_imageFormat == kJPG_PNG)) {
-                    QImageWriter writer(outputFilePath + imagePrefix(kJPG), "jpg");
-                    writer.setOptimizedWrite(true);
-                    writer.setCompression(100);
-                    writer.setQuality(_jpgQuality);
-                    writer.write(image);
-
-                    if (_imageFormat == kJPG_PNG) {
-                        QImage maskImage = convertImage(outputData._atlasImage, kALPHA, _premultiplied);
-                        QImageWriter writer(outputFilePath + imagePrefix(kPNG), "png");
-                        writer.setOptimizedWrite(true);
-                        writer.setCompression(100);
-                        writer.setQuality(0);
-                        writer.write(maskImage);
-                    }
-                }
-            } else if ((_imageFormat == kPKM) || (_imageFormat == kPVR) || (_imageFormat == kPVR_CCZ)) {
-                CPVRTextureHeader pvrHeader(PVRStandard8PixelType.PixelTypeID,
-                                            outputData._atlasImage.height(),
-                                            outputData._atlasImage.width());
-                // create the texture
-                CPVRTexture pvrTexture(pvrHeader, outputData._atlasImage.bits());
-                switch (_pixelFormat) {
-                    case kETC1: Transcode(pvrTexture, PixelType(ePVRTPF_ETC1), ePVRTVarTypeUnsignedByteNorm, ePVRTCSpacelRGB, eETCFast, true); break;
-                    case kETC2: Transcode(pvrTexture, PixelType(ePVRTPF_ETC2_RGB), ePVRTVarTypeUnsignedByteNorm, ePVRTCSpacelRGB, eETCFast, true); break;
-                    case kETC2A: Transcode(pvrTexture, PixelType(ePVRTPF_ETC2_RGBA), ePVRTVarTypeUnsignedByteNorm, ePVRTCSpacelRGB, eETCFast, true); break;
-                    case kPVRTC2: Transcode(pvrTexture, PixelType(ePVRTPF_PVRTCI_2bpp_RGB), ePVRTVarTypeUnsignedByteNorm, ePVRTCSpacelRGB, ePVRTCBest, true); break;
-                    case kPVRTC2A: Transcode(pvrTexture, PixelType(ePVRTPF_PVRTCI_2bpp_RGBA), ePVRTVarTypeUnsignedByteNorm, ePVRTCSpacelRGB, ePVRTCBest, true); break;
-                    case kPVRTC4: Transcode(pvrTexture, PixelType(ePVRTPF_PVRTCI_4bpp_RGB), ePVRTVarTypeUnsignedByteNorm, ePVRTCSpacelRGB, ePVRTCBest, true); break;
-                    case kPVRTC4A: Transcode(pvrTexture, PixelType(ePVRTPF_PVRTCI_4bpp_RGBA), ePVRTVarTypeUnsignedByteNorm, ePVRTCSpacelRGB, ePVRTCBest, true); break;
-                    case kDXT1: Transcode(pvrTexture, PixelType(ePVRTPF_DXT1), ePVRTVarTypeUnsignedByteNorm, ePVRTCSpacelRGB, ePVRTCBest, true); break;
-                    case kDXT3: Transcode(pvrTexture, PixelType(ePVRTPF_DXT3), ePVRTVarTypeUnsignedByteNorm, ePVRTCSpacelRGB, ePVRTCBest, true); break;
-                    case kDXT5: Transcode(pvrTexture, PixelType(ePVRTPF_DXT5), ePVRTVarTypeUnsignedByteNorm, ePVRTCSpacelRGB, ePVRTCBest, true); break;
-                    default: break;
-                }
-
-                qDebug() << "Transcode complete.";
-                // save the file
-                if (_imageFormat == kPVR_CCZ) {
-                    QString tempFileName = outputFilePath + "_temp.pvr";
-                    pvrTexture.saveFile(tempFileName.toStdString().c_str());
-
-                    // read and compress
-                    QFile file(tempFileName);
-                    file.open(QIODevice::ReadOnly);
-                    unsigned int uncompressedLen = file.size();
-                    QByteArray compressedData = qCompress(file.readAll());
-                    file.close();
-                    QFile::remove(tempFileName);
-
-                    //  Strip the first six bytes (a 4-byte length put on by qCompress)
-                    compressedData.remove(0, 4);
-
-                    struct CCZHeader {
-                        unsigned char   sig[4];             /** Signature. Should be 'CCZ!' 4 bytes. */
-                        unsigned short  compression_type;   /** Should be 0. */
-                        unsigned short  version;            /** Should be 2 (although version type==1 is also supported). */
-                        unsigned int    reserved;           /** Reserved for users. */
-                        unsigned int    len;                /** Size of the uncompressed file. */
-                    };
-
-                    CCZHeader cczHeader;
-                    cczHeader.sig[0] = 'C';
-                    cczHeader.sig[1] = 'C';
-                    cczHeader.sig[2] = 'Z';
-                    cczHeader.sig[3] = _encryptionKey.isEmpty()? '!':'p';
-                    cczHeader.compression_type = qToBigEndian<unsigned short>(0);
-                    cczHeader.version = qToBigEndian<unsigned short>(0);
-                    cczHeader.reserved = qToBigEndian<unsigned int>(0);
-                    cczHeader.len = qToBigEndian<unsigned int>(uncompressedLen);
-
-                    compressedData.insert(0, QByteArray((const char *)&cczHeader, sizeof(CCZHeader)));
-
-                    // encrypt
-                    if (!_encryptionKey.isEmpty()) {
-                        QString key = _encryptionKey;
-                        uint32_t keys[4];
-                        keys[0] = key.left(8).toUInt(nullptr, 16); key.remove(0, 8);
-                        keys[1] = key.left(8).toUInt(nullptr, 16); key.remove(0, 8);
-                        keys[2] = key.left(8).toUInt(nullptr, 16); key.remove(0, 8);
-                        keys[3] = key.left(8).toUInt(nullptr, 16); key.remove(0, 8);
-
-                        unsigned int* ints = (unsigned int*)(compressedData.data()+12);
-                        unsigned int enclen = (compressedData.length()-12)/4;
-
-                        CCZHeader* header = (CCZHeader*)compressedData.data();
-                        header->reserved = qToBigEndian<unsigned int>(checksumPvr(ints, enclen));
-
-                        encodePvr(ints, enclen, keys);
-                    }
-
-                    // write compressed data
-                    file.setFileName(fileName);
-                    file.open(QIODevice::WriteOnly);
-                    file.write(compressedData);
-                    file.close();
-                } else {
-                    pvrTexture.saveFile(fileName.toStdString().c_str());
-                }
-                qDebug() << "Write to file complete.";
-            }
+            if (_enableSaveImage)
+            if (!saveImage(outputFilePath, outputData._atlasImage))
+                return false;
         }
     }
 
-    if ((_imageFormat == kPNG) && (_pngQuality.optMode != "None")) {
-        qDebug() << "Begin optimize image...";
-        // we use values 1-7 so that it is more user friendly, because 0 also means optimization.
-        optimizePNGInThread(outputFilePaths, _pngQuality.optMode, _pngQuality.optLevel - 1);
+    if (_enableSaveImage)
+    {
+        if ((_imageFormat == kPNG) && (_pngQuality.optMode != "None")) {
+            qDebug() << "Begin optimize image...";
+            // we use values 1-7 so that it is more user friendly, because 0 also means optimization.
+            optimizePNGInThread(outputFilePaths, _pngQuality.optMode, _pngQuality.optLevel - 1);
+        }
     }
 
     _spriteAtlases.clear();
     _fileNames.clear();
+
+    return true;
+}
+
+bool PublishSpriteSheet::saveImage(const QString& outputFilePath, const QImage& atlasImage)
+{
+    QString fileName = outputFilePath + imagePrefix(_imageFormat);
+    QFile(fileName).remove();
+    if(verbose)
+        qDebug() << "Save image:" << fileName;
+    if ((_imageFormat == kPNG) || (_imageFormat == kWEBP) || (_imageFormat == kJPG) || (_imageFormat == kJPG_PNG)) {
+        QImage image = convertImage(atlasImage, _pixelFormat, _premultiplied);
+        if (_imageFormat == kPNG) {
+            QImageWriter writer(outputFilePath + imagePrefix(kPNG), "png");
+            writer.setOptimizedWrite(true);
+            writer.setCompression(_pngQuality.optLevel * 10);
+            writer.setQuality(0);
+            //QTime start = QTime::currentTime();
+            writer.write(image);
+            //QTime finish = QTime::currentTime();
+            //qDebug() << "Save png time:" << start.msecsTo(finish) << "ms";
+        } else if (_imageFormat == kWEBP) {
+            QImageWriter writer(outputFilePath + imagePrefix(kWEBP), "webp");
+            writer.setOptimizedWrite(true);
+            writer.setCompression(100);
+            writer.setQuality(_webpQuality);
+            writer.write(image);
+        } else if ((_imageFormat == kJPG) || (_imageFormat == kJPG_PNG)) {
+            QImageWriter writer(outputFilePath + imagePrefix(kJPG), "jpg");
+            writer.setOptimizedWrite(true);
+            writer.setCompression(100);
+            writer.setQuality(_jpgQuality);
+            writer.write(image);
+
+            if (_imageFormat == kJPG_PNG) {
+                QImage maskImage = convertImage(atlasImage, kALPHA, _premultiplied);
+                QImageWriter writer(outputFilePath + imagePrefix(kPNG), "png");
+                writer.setOptimizedWrite(true);
+                writer.setCompression(100);
+                writer.setQuality(0);
+                writer.write(maskImage);
+            }
+        }
+    } else if ((_imageFormat == kPKM) || (_imageFormat == kPVR) || (_imageFormat == kPVR_CCZ)) {
+        CPVRTextureHeader pvrHeader(PVRStandard8PixelType.PixelTypeID,
+                                    atlasImage.height(),
+                                    atlasImage.width());
+        // create the texture
+        CPVRTexture pvrTexture(pvrHeader, atlasImage.bits());
+        switch (_pixelFormat) {
+        case kETC1: Transcode(pvrTexture, PixelType(ePVRTPF_ETC1), ePVRTVarTypeUnsignedByteNorm, ePVRTCSpacelRGB, eETCFast, true); break;
+        case kETC2: Transcode(pvrTexture, PixelType(ePVRTPF_ETC2_RGB), ePVRTVarTypeUnsignedByteNorm, ePVRTCSpacelRGB, eETCFast, true); break;
+        case kETC2A: Transcode(pvrTexture, PixelType(ePVRTPF_ETC2_RGBA), ePVRTVarTypeUnsignedByteNorm, ePVRTCSpacelRGB, eETCFast, true); break;
+        case kPVRTC2: Transcode(pvrTexture, PixelType(ePVRTPF_PVRTCI_2bpp_RGB), ePVRTVarTypeUnsignedByteNorm, ePVRTCSpacelRGB, ePVRTCBest, true); break;
+        case kPVRTC2A: Transcode(pvrTexture, PixelType(ePVRTPF_PVRTCI_2bpp_RGBA), ePVRTVarTypeUnsignedByteNorm, ePVRTCSpacelRGB, ePVRTCBest, true); break;
+        case kPVRTC4: Transcode(pvrTexture, PixelType(ePVRTPF_PVRTCI_4bpp_RGB), ePVRTVarTypeUnsignedByteNorm, ePVRTCSpacelRGB, ePVRTCBest, true); break;
+        case kPVRTC4A: Transcode(pvrTexture, PixelType(ePVRTPF_PVRTCI_4bpp_RGBA), ePVRTVarTypeUnsignedByteNorm, ePVRTCSpacelRGB, ePVRTCBest, true); break;
+        case kDXT1: Transcode(pvrTexture, PixelType(ePVRTPF_DXT1), ePVRTVarTypeUnsignedByteNorm, ePVRTCSpacelRGB, ePVRTCBest, true); break;
+        case kDXT3: Transcode(pvrTexture, PixelType(ePVRTPF_DXT3), ePVRTVarTypeUnsignedByteNorm, ePVRTCSpacelRGB, ePVRTCBest, true); break;
+        case kDXT5: Transcode(pvrTexture, PixelType(ePVRTPF_DXT5), ePVRTVarTypeUnsignedByteNorm, ePVRTCSpacelRGB, ePVRTCBest, true); break;
+        default: break;
+        }
+
+        qDebug() << "Transcode complete.";
+        // save the file
+        if (_imageFormat == kPVR_CCZ) {
+            QString tempFileName = outputFilePath + "_temp.pvr";
+            pvrTexture.saveFile(tempFileName.toStdString().c_str());
+
+            // read and compress
+            QFile file(tempFileName);
+            file.open(QIODevice::ReadOnly);
+            unsigned int uncompressedLen = file.size();
+            QByteArray compressedData = qCompress(file.readAll());
+            file.close();
+            QFile::remove(tempFileName);
+
+            //  Strip the first six bytes (a 4-byte length put on by qCompress)
+            compressedData.remove(0, 4);
+
+            struct CCZHeader {
+                unsigned char   sig[4];             /** Signature. Should be 'CCZ!' 4 bytes. */
+                unsigned short  compression_type;   /** Should be 0. */
+                unsigned short  version;            /** Should be 2 (although version type==1 is also supported). */
+                unsigned int    reserved;           /** Reserved for users. */
+                unsigned int    len;                /** Size of the uncompressed file. */
+            };
+
+            CCZHeader cczHeader;
+            cczHeader.sig[0] = 'C';
+            cczHeader.sig[1] = 'C';
+            cczHeader.sig[2] = 'Z';
+            cczHeader.sig[3] = _encryptionKey.isEmpty()? '!':'p';
+            cczHeader.compression_type = qToBigEndian<unsigned short>(0);
+            cczHeader.version = qToBigEndian<unsigned short>(0);
+            cczHeader.reserved = qToBigEndian<unsigned int>(0);
+            cczHeader.len = qToBigEndian<unsigned int>(uncompressedLen);
+
+            compressedData.insert(0, QByteArray((const char *)&cczHeader, sizeof(CCZHeader)));
+
+            // encrypt
+            if (!_encryptionKey.isEmpty()) {
+                QString key = _encryptionKey;
+                uint32_t keys[4];
+                keys[0] = key.left(8).toUInt(nullptr, 16); key.remove(0, 8);
+                keys[1] = key.left(8).toUInt(nullptr, 16); key.remove(0, 8);
+                keys[2] = key.left(8).toUInt(nullptr, 16); key.remove(0, 8);
+                keys[3] = key.left(8).toUInt(nullptr, 16); key.remove(0, 8);
+
+                unsigned int* ints = (unsigned int*)(compressedData.data()+12);
+                unsigned int enclen = (compressedData.length()-12)/4;
+
+                CCZHeader* header = (CCZHeader*)compressedData.data();
+                header->reserved = qToBigEndian<unsigned int>(checksumPvr(ints, enclen));
+
+                encodePvr(ints, enclen, keys);
+            }
+
+            // write compressed data
+            file.setFileName(fileName);
+            file.open(QIODevice::WriteOnly);
+            file.write(compressedData);
+            file.close();
+        } else {
+            pvrTexture.saveFile(fileName.toStdString().c_str());
+        }
+        qDebug() << "Write to file complete.";
+    }
 
     return true;
 }

@@ -74,80 +74,111 @@ bool SpriteAtlas::generate(SpriteAtlasGenerateProgress* progress) {
                 fileList.push_back(qMakePair(fileNames.filePath(), relativePath));
             }
         } else {
-            fileList.push_back(qMakePair(pathName, fi.fileName()));
+            if (_isValidProjectDir)
+            {
+                QString relativePath = _projectDir.relativeFilePath(pathName);
+                fileList.push_back(qMakePair(pathName, relativePath));
+            } else
+            {
+                fileList.push_back(qMakePair(pathName, fi.fileName()));
+            }
         }
     }
 
     int skipSprites = 0;
-
     // init images and rects
     _identicalFrames.clear();
 
     int progressIndex = 1;
     QVector<PackContent> inputContent;
-    auto it_f = fileList.begin();
-    for(; it_f != fileList.end(); ++it_f, ++progressIndex) {
-        if (_aborted) return false;
 
-        QImage image((*it_f).first);
-        if (image.isNull()) continue;
-        if (_scale != 1) {
-            image = image.scaled(ceil(image.width() * _scale), ceil(image.height() * _scale), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        }
-        if (image.format() == QImage::Format_Indexed8) {
-            image = image.convertToFormat(QImage::Format_ARGB32);
-        }
-
-        // Apply Heuristic mask
-        if (_heuristicMask) {
-            QPixmap pix = QPixmap::fromImage(image);
-            pix.setMask(pix.createHeuristicMask());
-            image = pix.toImage();
-        }
-
-        PackContent packContent((*it_f).second, image);
-
-        // Trim / Crop
-        if (_trim) {
-            if (_polygonMode.enable) {
-                bool packToRect = _trimRectListFiles.contains((*it_f).first);
-                if (verbose)
-                    qDebug() << (*it_f).first << "packToRect ="<<packToRect;
-                PolygonImage2 polygonImage(packContent.image(), packContent.rect(), packToRect);
-                //packContent.setPolygons(polygonImage.polygons());
-                packContent.setTriangles(polygonImage.triangles());
-                /* test code
-                QImage tmp_img = packContent.triangles().drawTriangles();
-                tmp_img.save("tmp_img.png");
-                exit(1);
-                */
-            } else
-            {
-                packContent.trim(_trim);
+    auto addIdentical = [this, &skipSprites, &inputContent](PackContent& packContent) -> bool
+    {
+        // Find Identical
+        bool findIdentical = false;
+        for (auto& content: inputContent) {
+            if (content.isIdentical(packContent)) {
+                findIdentical = true;
+                _identicalFrames[content.name()].push_back(packContent.name());
+                if(verbose)
+                    qDebug() << "isIdentical:" << packContent.name() << "==" << content.name();
+                skipSprites++;
+                break;
             }
         }
 
-        if(_enableFindIdentical)
-        {
-            // Find Identical
-            bool findIdentical = false;
-            for (auto& content: inputContent) {
-                if (content.isIdentical(packContent)) {
-                    findIdentical = true;
-                    _identicalFrames[content.name()].push_back(packContent.name());
-                    if(verbose)
-                        qDebug() << "isIdentical:" << packContent.name() << "==" << content.name();
-                    skipSprites++;
-                    break;
+        return findIdentical;
+    };
+
+    if (_enableUsePolygonInfo)
+    {
+        for(auto it_f = fileList.begin(); it_f != fileList.end(); ++it_f, ++progressIndex) {
+            if (_aborted) return false;
+            PackContent packContent;
+            if (!packContent.load(_storePolygonInfoDir, it_f->second))
+                return false;
+
+            if(_enableFindIdentical)
+            {
+                if (addIdentical(packContent))
+                    continue;
+            }
+
+            inputContent.push_back(packContent);
+        }
+    } else
+    {
+        for(auto it_f = fileList.begin(); it_f != fileList.end(); ++it_f, ++progressIndex) {
+            if (_aborted) return false;
+
+            QImage image((*it_f).first);
+            if (image.isNull()) continue;
+            if (_scale != 1) {
+                image = image.scaled(ceil(image.width() * _scale), ceil(image.height() * _scale), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            }
+            if (image.format() == QImage::Format_Indexed8) {
+                image = image.convertToFormat(QImage::Format_ARGB32);
+            }
+
+            // Apply Heuristic mask
+            if (_heuristicMask) {
+                QPixmap pix = QPixmap::fromImage(image);
+                pix.setMask(pix.createHeuristicMask());
+                image = pix.toImage();
+            }
+
+            PackContent packContent((*it_f).second, image);
+
+
+            // Trim / Crop
+            if (_trim) {
+                if (_polygonMode.enable) {
+                    bool packToRect = _trimRectListFiles.contains((*it_f).first);
+                    if (verbose)
+                        qDebug() << (*it_f).first << "packToRect ="<<packToRect;
+                    PolygonImage2 polygonImage(packContent.image(), packContent.rect(), packToRect);
+                    packContent.setTriangles(polygonImage.triangles());
+                    /* test code
+                    QImage tmp_img = packContent.triangles().drawTriangles();
+                    tmp_img.save("tmp_img.png");
+                    exit(1);
+                    */
+                } else
+                {
+                    packContent.trim(_trim);
                 }
             }
-            if (findIdentical) {
-                continue;
-            }
-        }
 
-        inputContent.push_back(packContent);
+            if(_enableFindIdentical)
+            {
+                if (addIdentical(packContent))
+                    continue;
+            }
+
+            inputContent.push_back(packContent);
+        }
     }
+
     if (skipSprites)
         qDebug() << "Total skip sprites: " << skipSprites;
 
@@ -158,9 +189,8 @@ bool SpriteAtlas::generate(SpriteAtlasGenerateProgress* progress) {
         result = packWithRect(inputContent);
     }
 
-    int elapsed = timePerform.elapsed();
-    if(verbose)
-        qDebug() << "Generate time mc:" <<  elapsed/1000.f << "sec";
+    //if(verbose)
+        qDebug() << "Generate time:" <<  QString::number(timePerform.elapsed_sec(), 'f', 3) << "sec";
 
     return result;
 }
@@ -613,8 +643,29 @@ bool SpriteAtlas::packWithPolygon(const QVector<PackContent>& content) {
     std::vector<PackContent> contents_std;
     contents_std.insert(contents_std.end(), content.begin(), content.end());
     PolygonPackBalmer polygon_pack(verbose);
-    QSize granularity(4,4);
-    polygon_pack.place(contents_std, _maxTextureSize, granularity, _spriteBorder);
+
+    polygon_pack.setMaxTextureSize(_maxTextureSize);
+    polygon_pack.setGranularity(_granularity);
+    polygon_pack.setSpriteBorder(_spriteBorder);
+    polygon_pack.setContent(contents_std);
+
+    if (_enableStorePolygonInfo)
+    {
+        if (!_isValidProjectDir)
+        {
+            qCritical() << "_isValidProjectDir==false";
+            return false;
+        }
+
+        //Не пакуем, а только сохраняем полигональную информацию о наших изображениях
+        auto outputContent = polygon_pack.contentList();
+        for(auto& content : outputContent) {
+            content.save(_storePolygonInfoDir);
+        }
+        return true;
+    }
+
+    polygon_pack.place();
 
     auto outputContent = polygon_pack.contentList();
 

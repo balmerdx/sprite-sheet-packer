@@ -211,7 +211,7 @@ void OptimizeByClipper::optimize(const std::vector<ImageBorderElem>& elems_doubl
         SimplifyPolygon(elem.border, simply_border);
         if (simply_border.size() != 1)
         {
-            qDebug() << "OptimizeByClipper::optimize unexpected result!!! size =" << simply_border.size();
+            //qDebug() << "OptimizeByClipper::optimize unexpected result!!! size =" << simply_border.size();
         } else
         {
             elem.border = simply_border[0];
@@ -772,6 +772,7 @@ void OptimizeByClipper::addHole(const ClipperLib::Path& hole, ImageBorderInt &ou
         cur_path = simply_path;
     }
 
+
     {
         //Оставляем только те, для которых min_factor < 0
         Paths solution_clean;
@@ -802,6 +803,8 @@ void OptimizeByClipper::addHole(const ClipperLib::Path& hole, ImageBorderInt &ou
 
 
     for(Path& pout : solution)
+    {
         out_border.holes.push_back(pout);
+    }
     //out_border.border = solution[0];
 }

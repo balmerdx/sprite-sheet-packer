@@ -123,7 +123,7 @@ bool FillIterate::is_border(int x, int y)
    Тогда в border = { {x,y}, {x+1, y}, {x+1, y+1}, {x, y+1}};
    Начальная точка обязана в 4 прилегающих пикселях иметь один полный и один пустой
 */
-void ImageBorder::fillBorder(AImage& img, int xstart, int ystart, std::vector<p2t::Point>& border)
+void ImageBorder::fillBorder(AImage& img, int xstart, int ystart, std::vector<p2t::Point>& border, bool border_is_hole)
 {
     auto mask = [&img](int x, int y) -> uint8_t
     {
@@ -193,23 +193,39 @@ void ImageBorder::fillBorder(AImage& img, int xstart, int ystart, std::vector<p2
             //В первоначальном пикселе такой конфигурации быть не может
             //.#
             //#.
-            if (dx_prev == 1 && dy_prev == 0)
+            if (border_is_hole)
             {
-                ynext++;
-            } else if (dx_prev == -1 && dy_prev == 0)
-            {
-                ynext--;
+                if (dx_prev == 1 && dy_prev == 0)
+                {
+                    ynext++;
+                } else if (dx_prev == -1 && dy_prev == 0)
+                {
+                    ynext--;
+                } else
+                {
+                    if(dx_prev == 0 && dy_prev == 0)
+                    {
+                        //В первоначальной конфигурации может быть, если мы обходим hole
+                        ynext++;
+                        break;
+                    }
+
+                    assert(0);
+                    return;
+                }
             } else
             {
-                if(dx_prev == 0 && dy_prev == 0)
+                if (dx_prev == 1 && dy_prev == 0)
                 {
-                    //В первоначальной конфигурации может быть, если мы обходим hole
                     ynext++;
-                    break;
+                } else if (dx_prev == -1 && dy_prev == 0)
+                {
+                    ynext--;
+                } else
+                {
+                    assert(0);
+                    return;
                 }
-
-                return;
-                assert(0);
             }
             break;
         case 7:
@@ -227,16 +243,33 @@ void ImageBorder::fillBorder(AImage& img, int xstart, int ystart, std::vector<p2
             //В первоначальном пикселе такой конфигурации быть не может
             //#.
             //.#
-            if (dx_prev == 0 && dy_prev == 1)
+            if (border_is_hole)
             {
-                xnext--;
-            } else if (dx_prev == 0 && dy_prev == -1)
-            {
-                xnext++;
+                if (dx_prev == 0 && dy_prev == 1)
+                {
+                    xnext++;
+                } else if (dx_prev == 0 && dy_prev == -1)
+                {
+                    xnext--;
+                } else
+                {
+                    assert(0);
+                    return;
+                }
+
             } else
             {
-                return;
-                assert(0);
+                if (dx_prev == 0 && dy_prev == 1)
+                {
+                    xnext--;
+                } else if (dx_prev == 0 && dy_prev == -1)
+                {
+                    xnext++;
+                } else
+                {
+                    assert(0);
+                    return;
+                }
             }
             break;
         case 10:
@@ -350,7 +383,7 @@ void ImageBorder::fillOuterBorder(AImage& img, const AImage &original_img)
             break;
 
         ImageBorderElem elem;
-        fillBorder(img, xfirst, yfirst, elem.border);
+        fillBorder(img, xfirst, yfirst, elem.border, false);
 
         FillIterate fi(xfirst, yfirst, [&img](int x, int y)
                        {
@@ -500,7 +533,7 @@ void ImageBorder::fillHoles(AImage& img)
             break;
 
         std::vector<p2t::Point> hole;
-        fillBorder(img, xfirst, yfirst, hole);
+        fillBorder(img, xfirst, yfirst, hole, true);
 
         FillIterate fi(xfirst, yfirst, [this](int x, int y)
                        {

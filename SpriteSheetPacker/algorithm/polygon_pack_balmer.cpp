@@ -70,52 +70,155 @@ void PolygonPackContent::setOffsetNoMoveTriangle(const QPoint& offset)
     _bounds.moveTo(_bounds.topLeft() + offset);
 }
 
+static QJsonObject toJson(QRect rect)
+{
+    QJsonObject json;
+    json.insert("x", rect.left());
+    json.insert("y", rect.top());
+    json.insert("w", rect.width());
+    json.insert("h", rect.height());
+    return json;
+}
+
+static QJsonObject toJson(QPoint p)
+{
+    QJsonObject json;
+    json.insert("x", p.x());
+    json.insert("y", p.y());
+    return json;
+}
+
+static QRect fromJson(const QJsonValue& v)
+{
+    const QJsonObject o = v.toObject();
+    return QRect(o.value("x").toInt(), o.value("y").toInt(), o.value("w").toInt(), o.value("h").toInt());
+}
+
+bool PolygonPackContent::save(QDir storeDir)
+{
+    QString fullPath = storeDir.absoluteFilePath(_content.name());
+    QFileInfo fullPathInfo(fullPath);
+    fullPathInfo.dir().mkpath(".");
+
+    //Здесь записать всю информацию PolygonPackContent
+    if(!_content.image().save(fullPath))
+    {
+        qCritical() << "Cannot save image : " << fullPath;
+        return false;
+    }
+    QString jsonPath = fullPathInfo.absoluteDir().absoluteFilePath(fullPathInfo.baseName()+".json");
+
+    QJsonObject jsonRoot;
+    jsonRoot.insert("name", _content.name());
+    jsonRoot.insert("rect", toJson(_content.rect()));
+    jsonRoot.insert("triangles", _content.triangles().toJson());
+    jsonRoot.insert("mask", mask.toJson());
+    jsonRoot.insert("offset", toJson(_offset));
+    jsonRoot.insert("initial_bound", toJson(_initial_bound));
+    jsonRoot.insert("area", _area);
+    jsonRoot.insert("bounds", toJson(_bounds));
+
+    QFile file(jsonPath);
+    file.open(QIODevice::WriteOnly);
+    if (!file.isOpen())
+    {
+        qCritical() << "Cannot save file :" << jsonPath;
+        return false;
+    }
+
+    QJsonDocument jsonDoc(jsonRoot);
+    file.write(jsonDoc.toJson(QJsonDocument::Indented));
+    return file.error() == QFileDevice::NoError;
+}
+
+bool PackContent::load(QDir storeDir, QString name)
+{
+    QString fullPath = storeDir.absoluteFilePath(name);
+    if(!_image.load(fullPath))
+    {
+        qCritical() << "Cannot load image : " << fullPath;
+        return false;
+    }
+
+    QFileInfo fullPathInfo(fullPath);
+    QString jsonPath = fullPathInfo.absoluteDir().absoluteFilePath(fullPathInfo.baseName()+".json");
+    QFile file(jsonPath);
+    file.open(QIODevice::ReadOnly);
+    if (!file.isOpen())
+    {
+        qCritical() << "Cannot open file :" << jsonPath;
+        return false;
+    }
+
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(file.readAll());
+    QJsonObject jsonRoot = jsonDoc.object();
+    _name = jsonRoot.value("name").toString();
+    if (_name != name)
+    {
+        qCritical() << "PackContent::load" << name << "!=" << _name;
+        return false;
+    }
+
+    _rect = fromJson(jsonRoot.value("rect"));
+    _triangles.fromJson(jsonRoot.value("triangles").toObject());
+    return true;
+}
+
+///////////////////////PolygonPackBalmer//////////////////////////////////////////
 PolygonPackBalmer::PolygonPackBalmer(bool verbose)
     : _verbose(verbose)
 {
 }
 
-void PolygonPackBalmer::place(const std::vector<PackContent>& contents, QSize maxTextureSize, QSize granularity, int border)
+void PolygonPackBalmer::setContent(const std::vector<PackContent>& contents)
 {
-    std::vector<PolygonPackContent> src_contents;
-    src_contents.reserve(contents.size());
+    _contentList.reserve(contents.size());
     for(const PackContent& content : contents)
     {
-        src_contents.emplace_back(content);
+        _contentList.emplace_back(content);
     }
 
-    std::sort(src_contents.begin(), src_contents.end(), [](const PolygonPackContent& a, const PolygonPackContent& b)
+    for(PolygonPackContent& content : _contentList)
+    {
+        AImage cur_aimage_no_border(content.triangles().drawTriangles());
+        AImage cur_aimage = cur_aimage_no_border.expandRightBottom(_spriteBorder);
+
+        BinImage cur_image(cur_aimage, _granularity.width(), _granularity.height());
+
+        content.pixel_border = std::move(cur_aimage);
+        content.pixel_border.excludeMask(cur_aimage_no_border);
+        content.mask = std::move(cur_image);
+    }
+}
+
+void PolygonPackBalmer::place()
+{
+
+    std::sort(_contentList.begin(), _contentList.end(), [](const PolygonPackContent& a, const PolygonPackContent& b)
     {
         auto areaA = a.area();
         auto areaB = b.area();
         return areaA > areaB;
     });
 
-    BinImage big_image(maxTextureSize.width() / granularity.width(), maxTextureSize.height() / granularity.height());
+    BinImage big_image(_maxTextureSize.width() / _granularity.width(),
+                       _maxTextureSize.height() / _granularity.height());
 
     bool first = true;
     int idx = 0;
-    for(PolygonPackContent& content : src_contents)
+    for(PolygonPackContent& content : _contentList)
     {
-        AImage cur_aimage_no_border(content.triangles().drawTriangles());
-        AImage cur_aimage = cur_aimage_no_border.expandRightBottom(border);
-        content.pixel_border = cur_aimage.clone();
-        content.pixel_border.excludeMask(cur_aimage_no_border);
-
-        BinImage cur_image(cur_aimage, granularity.width(), granularity.height());
-        BinImageTest cur_image_test(cur_image);
-
-        content.mask = cur_image.clone();
+        BinImageTest cur_image_test(content.mask);
 
         bool placed = false;
-        for(int y=0; y<big_image.height() - cur_image.height(); y++)
+        for(int y=0; y<big_image.height() - content.mask.height(); y++)
         {
-            for(int x=0; x<big_image.width() - cur_image.width(); x++)
+            for(int x=0; x<big_image.width() - content.mask.width(); x++)
             {
                 if(cur_image_test.test(big_image, x, y))
                 {
                     cur_image_test.place(big_image, x, y);
-                    content.setOffsetNoMoveTriangle(QPoint(x*granularity.width(), y*granularity.height()));
+                    content.setOffsetNoMoveTriangle(QPoint(x * _granularity.width(), y * _granularity.height()));
                     if (first)
                     {
                         _bounds = content.bounds();
@@ -126,7 +229,7 @@ void PolygonPackBalmer::place(const std::vector<PackContent>& contents, QSize ma
                     }
 
                     if(_verbose)
-                        qDebug() << idx << "/" << src_contents.size() << ":" << content.content().name();
+                        qDebug() << idx << "/" << _contentList.size() << ":" << content.content().name();
                     idx++;
 
                     placed = true;
@@ -144,6 +247,4 @@ void PolygonPackBalmer::place(const std::vector<PackContent>& contents, QSize ma
     }
 
     big_image.qimage().save("big_image.png");
-
-    _contentList = std::move(src_contents);
 }

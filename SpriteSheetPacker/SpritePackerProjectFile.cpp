@@ -350,12 +350,16 @@ bool SpritePackerProjectFile::rotateSpritesCwStatic(const QString& dataFormat)
 
 bool SpritePackerProjectFile::loadTrimRectList(QDir dir, QString trimRectList)
 {
-    _trimRectListFiles.clear();
-    QString filenameList = dir.absoluteFilePath(trimRectList);
+    return loadFilesList(dir, trimRectList, "loadTrimRectList", _trimRectListFiles);
+}
+bool SpritePackerProjectFile::loadFilesList(QDir dir, QString listFilename, QString tag, QStringList& filesList)
+{
+    filesList.clear();
+    QString filenameList = dir.absoluteFilePath(listFilename);
     QFile inputFile(filenameList);
     if (!inputFile.open(QIODevice::ReadOnly))
     {
-        qCritical() << "Cannot open " << filenameList;
+        qCritical() << tag << ": Cannot open: " << filenameList;
         return false;
     }
     {
@@ -365,17 +369,20 @@ bool SpritePackerProjectFile::loadTrimRectList(QDir dir, QString trimRectList)
             QString line = in.readLine();
             if(line.isEmpty())
                 continue;
-            QString filename = dir.absoluteFilePath(line);
+            QString filename;
+            if (QFileInfo(line).isAbsolute())
+                filename = line;
+            else
+                filename = dir.absoluteFilePath(line);
             QFileInfo fi(filename);
             if (!fi.exists())
             {
-                qDebug() << "loadTrimRectList: File not found :" << filename;
+                qDebug() << tag << ": File not found :" << filename;
                 continue;
             }
 
             filename = filename.replace('\\', '/');
-
-            _trimRectListFiles.push_back(filename);
+            filesList.push_back(filename);
         }
         inputFile.close();
     }

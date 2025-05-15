@@ -22,6 +22,9 @@ public:
     const Triangles& triangles() const { return _triangles; }
     Triangles& triangles() { return _triangles; }
 
+    //Читает всю информацию PackContent с диска
+    //Информация записывается в PolygonPackContent::save
+    bool load(QDir storeDir, QString name);
 private:
     QString _name;
     QImage  _image;

@@ -1,4 +1,6 @@
 #include "triangles.h"
+#include <QJsonObject>
+#include <QJsonArray>
 
 QImage Triangles::drawTriangles() const
 {
@@ -35,4 +37,42 @@ QImage Triangles::drawTriangles() const
     }
 
     return std::move(out);
+}
+
+QJsonObject Triangles::toJson() const
+{
+    QJsonObject out;
+
+    QJsonArray arrVerts;
+    for(QPoint p : verts)
+    {
+        arrVerts.push_back(p.x());
+        arrVerts.push_back(p.y());
+    }
+
+    QJsonArray arrIndices;
+    for(auto idx : indices)
+    {
+        arrIndices.push_back(idx);
+    }
+
+
+    out.insert("verts", arrVerts);
+    out.insert("indices", arrIndices);
+    return out;
+}
+
+void Triangles::fromJson(const QJsonObject& jobj)
+{
+    QJsonArray jverts = jobj.value("verts").toArray();
+    QJsonArray jindices = jobj.value("indices").toArray();
+
+    verts.resize(jverts.size() / 2);
+    for(qsizetype i = 0; i < verts.size(); i++)
+        verts[i] = QPoint(jverts[i*2].toInt(), jverts[i*2+1].toInt());
+
+    indices.resize(jindices.size());
+    for(qsizetype i = 0; i < jindices.size(); i++)
+        indices[i] = jindices[i].toInt();
+
 }

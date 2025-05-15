@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
     setlocale(LC_NUMERIC, "C");
     QApplication a(argc, argv);
 
-    if(1)
+    if(0)
     {
         AImage b;
         b = std::move(copyImage());
@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     //QString filename = R"(images\hole.png)";
     //QString filename = R"(images\fill_outer.png)";
     //QString filename = R"(images\touched_areas.png)";
-    QString filename = R"(images\flag_1.png)";
+    //QString filename = R"(images\flag_1.png)";
     //QString filename = R"(images\soil_road_1.png)";
     //QString filename = R"(images\plants_forest_dk3.png)";
     //QString filename = R"(images\stone_forest_141_d.png)";
@@ -56,6 +56,8 @@ int main(int argc, char *argv[])
     //QString filename = R"(images\xy.png)";
     //QString filename = R"(images\tile_floor_big3.png)";
     //QString filename = R"(images\a0.png)";
+    QString filename = R"(images\tree_big_2_crop.png)";
+
 
 
     MainWindow w;

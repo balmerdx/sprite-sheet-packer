@@ -39,6 +39,10 @@ int commandLine(QCoreApplication& app) {
         {"enable-find-identical", "Enable find identical sprite (default 1)", "bool", "1"},
         {"granularityX", "Set granularity x (default 1)", "int", "1"},
         {"granularityY", "Set granularity y (default 1)", "int", "1"},
+        {"source-list-file", "Override default image source list. The paths in the file are relative to the project file directory (or shuld be absolute path).", "path", ""},
+        {"make-polygon-info", "Set directory to store polygon info.", "path", ""},
+        {"use-polygon-info", "Set directory to read polygon info.", "path", ""},
+        {"disable-save-image", "Then publish save dont save images"},
     });
 
     parser.process(app);
@@ -113,6 +117,12 @@ int commandLine(QCoreApplication& app) {
     bool enableFindIdentical = true;
     bool errorIfNotFit = false;
     QSize granularity(1, 1);
+    bool enableMakePolygonInfo = false;
+    bool enableUsePolygonInfo = false;
+    QDir storePolygonInfoDir;
+    bool enableOverrideSourceListFile = false;
+    QStringList overrideSourceListFile;
+    bool enableSaveImage = true;
 
     if (projectFile) {
         if (!projectFile->read(source.filePath())) {
@@ -212,6 +222,7 @@ int commandLine(QCoreApplication& app) {
 
     if (granularity.width() != 1 || granularity.height() != 1)
     {
+/*
         if (textureBorder != 0 )
         {
             qDebug() << "Granularity in settings require textureBorder=0";
@@ -223,13 +234,55 @@ int commandLine(QCoreApplication& app) {
             qDebug() << "Granularity in settings require trim=0";
             return -1;
         }
-
+*/
         if (rotateSprites)
         {
             qDebug() << "Granularity in settings require rotateSprites=false";
             return -1;
         }
     }
+
+    if (parser.isSet("make-polygon-info"))
+    {
+        auto value = parser.value("make-polygon-info");
+        if(verbose) qDebug() << "make-polygon-info:" << value;
+        enableMakePolygonInfo = true;
+        storePolygonInfoDir = QDir(value);
+        if(!storePolygonInfoDir.mkpath("."))
+        {
+            qCritical() << "Cannot create path :" << value;
+            return -1;
+        }
+    }
+
+    if (parser.isSet("use-polygon-info"))
+    {
+        auto value = parser.value("use-polygon-info");
+        if(verbose) qDebug() << "use-polygon-info:" << value;
+        enableUsePolygonInfo = true;
+        storePolygonInfoDir = QDir(value);
+    }
+
+    if (parser.isSet("source-list-file"))
+    {
+        auto listFilename = parser.value("source-list-file");
+        if(verbose) qDebug() << "source-list-file :" << listFilename;
+
+        enableOverrideSourceListFile = true;
+        if(!SpritePackerProjectFile::loadFilesList(source.absoluteDir(), listFilename, "source-list-file", overrideSourceListFile))
+        {
+            return -1;
+        }
+
+        //if(verbose) qDebug() << "overrideSourceListFile :" << overrideSourceListFile;
+        //if(verbose) qDebug() << "projectFile->srcList() :" << projectFile->srcList();
+    }
+
+    if (parser.isSet("disable-save-image"))
+    {
+        enableSaveImage = false;
+    }
+
 
     if(verbose)
     {
@@ -245,7 +298,7 @@ int commandLine(QCoreApplication& app) {
         qDebug() << "png-opt-mode:" << pngOptMode;
         qDebug() << "png-opt-level:" << pngOptLevel;
         qDebug() << "rotateSprites:" << rotateSprites;
-        qDebug() << "destination:" << destination;
+        qDebug() << "destination:" << destination.absolutePath();
         qDebug() << "granularity:" << granularity;
     }
 
@@ -266,6 +319,8 @@ int commandLine(QCoreApplication& app) {
     {
         publisher.setPremultiplied(projectFile->premultiplied());
     }
+    publisher.setEnableSaveImage(enableSaveImage);
+
 
     // load formats
     PublishSpriteSheet::formats().clear();
@@ -307,11 +362,24 @@ int commandLine(QCoreApplication& app) {
             }
 
             // Generate sprite atlas
-            SpriteAtlas atlas(QStringList() << projectFile->srcList(), projectFile->getTrimRectList(),
+            SpriteAtlas atlas(QStringList() << (enableOverrideSourceListFile ? overrideSourceListFile : projectFile->srcList()),
+                              projectFile->getTrimRectList(),
                               textureBorder, spriteBorder, trim, heuristicMask, pow2,
                               forceSquared, maxSize, scale, granularity, variant.fixedTextureSize);
             atlas.setRotateSprites(rotateSprites, projectFile->rotateSpritesCw());
             atlas.enableFindIdentical(enableFindIdentical);
+            atlas.setProjectDir(source.absoluteDir());
+
+            if (enableMakePolygonInfo)
+            {
+                atlas.enableFindIdentical(false);
+                atlas.setStorePolygonInfoDir(storePolygonInfoDir);
+            }
+
+            if (enableUsePolygonInfo)
+            {
+                atlas.setUsePolygonInfoDir(storePolygonInfoDir);
+            }
 
             if (trimMode == "Polygon") {
                 atlas.enablePolygonMode(true, epsilon);
@@ -324,11 +392,17 @@ int commandLine(QCoreApplication& app) {
                 return -1;
             }
 
+            if (enableMakePolygonInfo)
+            {
+                return 0;
+            }
+
             publisher.addSpriteSheet(atlas, destFileInfo.filePath());
 
             if (!parser.isSet("format")) {
                 format = projectFile->dataFormat();
             }
+
         }
 
         delete projectFile;

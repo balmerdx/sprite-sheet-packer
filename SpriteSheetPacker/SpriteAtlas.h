@@ -73,6 +73,12 @@ public:
     void setAlgorithm(const QString& algorithm) { _algorithm = algorithm; }
     void enablePolygonMode(bool enable, float epsilon = 2.f);
 
+    //Работает только в случае setAlgorithm("Polygon") и enablePolygonMode(true)
+    void setStorePolygonInfoDir(QDir dir) { _storePolygonInfoDir = dir; _enableStorePolygonInfo = true; }
+    void setUsePolygonInfoDir(QDir dir) { _storePolygonInfoDir = dir; _enableUsePolygonInfo = true; }
+    //Директория относительно которой считается relative path для отдельных файлов.
+    void setProjectDir(QDir dir) { _projectDir = dir; _isValidProjectDir = true; }
+
     //rotateCw = True - вращать спрайт по часовой стрелке.
     void setRotateSprites(bool value, bool rotateCw) { _rotateSprites = value; _rotateSpritesCw = rotateCw; }
 
@@ -132,6 +138,12 @@ private:
     bool _aborted = false;
 
     QSize _granularity = QSize(1,1);
+
+    QDir _storePolygonInfoDir;
+    bool _enableStorePolygonInfo = false;
+    bool _enableUsePolygonInfo = false;
+    QDir _projectDir;
+    bool _isValidProjectDir = false;
 };
 
 extern bool verbose;

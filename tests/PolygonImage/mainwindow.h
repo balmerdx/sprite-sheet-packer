@@ -20,6 +20,7 @@ public:
     enum class DrawType
     {
         Triangle,
+        Path,
         Polygon,
         BinImage
     };
@@ -30,6 +31,7 @@ protected:
     QString filename;
     QLabel* labelImage = nullptr;
     QAction* actPolygon = nullptr;
+    QAction* actPath = nullptr;
     QAction* actTriangle = nullptr;
     QAction* actBinImage = nullptr;
 

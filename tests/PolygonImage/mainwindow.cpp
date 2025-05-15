@@ -59,10 +59,15 @@ void drawBorder(QPixmap& pixmap, const std::vector<ImageBorderElem>& elems, int 
         auto& border = elem.border;
         drawBorder(p, border, scale, pixmap.size());
 
-        p.setPen(QColor(0, 255, 255));
         qDebug() << "Holes count = " << elem.holes.size();
+        bool odd = false;
         for(auto& hole : elem.holes)
+        {
+            p.setPen(odd ? QColor(0, 255, 255) : QColor(255, 0, 0));
+            odd = !odd;
+
             drawBorder(p, hole, scale, pixmap.size());
+        }
         //drawBorder(p, elem.holes[3], scale, pixmap.size());
     }
 }
@@ -125,6 +130,62 @@ void drawTriangles(QPixmap& pixmap, const std::vector<ImageBorderElem>& elems, i
             line(*p0, *p1);
             line(*p1, *p2);
             line(*p2, *p0);
+        }
+    };
+
+    {
+        OptimizeByClipper op;
+        op.optimize(elems);
+        int cidx = 0;
+        for(auto& r : op.result)
+        {
+            draw_border(r);
+            p.setPen((cidx%2) ? QColor(255, 0, 0) : QColor(0, 0, 255));
+            cidx++;
+        }
+    }
+}
+
+void drawPath(QPixmap& pixmap, const std::vector<ImageBorderElem>& elems, int scale)
+{
+    QPainter p(&pixmap);
+    QSize size = pixmap.size();
+
+    auto line = [&p, scale, size](p2t::Point p0, p2t::Point p1)
+    {
+        auto x0 = (int)lround(p0.x)*scale;
+        auto y0 = (int)lround(p0.y)*scale;
+        auto x1 = (int)lround(p1.x)*scale;
+        auto y1 = (int)lround(p1.y)*scale;
+        x0 = std::min(x0, size.width()-1);
+        y0 = std::min(y0, size.height()-1);
+        x1 = std::min(x1, size.width()-1);
+        y1 = std::min(y1, size.height()-1);
+
+        p.drawLine(x0, y0, x1, y1);
+    };
+
+    p.setPen(QColor(0, 255, 0));
+
+    auto draw_patch = [line](const std::vector<p2t::Point>& points)
+    {
+        if (points.empty())
+            return;
+        auto prev = points.back();
+        for(auto cur : points)
+        {
+            line(prev, cur);
+            prev = cur;
+        }
+    };
+
+    auto draw_border = [draw_patch](const ImageBorderElem& elem)
+    {
+        draw_patch(elem.border);
+
+        for(auto& hole : elem.holes)
+        {
+            draw_patch(hole);
         }
     };
 
@@ -240,13 +301,17 @@ bool MainWindow::load(QString filename)
         p.drawImage(0,0, img);
     }
 
-    const int scale = 5;
+    //const int scale = 5;
+    const int scale = 3;
     checkmate = checkmate.scaledToWidth(checkmate.width()*scale);
 
     switch(drawType)
     {
     case DrawType::Triangle:
         drawTriangles(checkmate, ib.elems, scale);
+        break;
+    case DrawType::Path:
+        drawPath(checkmate, ib.elems, scale);
         break;
     case DrawType::Polygon:
         drawBorder(checkmate, ib.elems, scale);
@@ -272,6 +337,12 @@ void MainWindow::addMenuElems()
     });
     actPolygon->setCheckable(true);
 
+    actPath = smenu->addAction("Path", [this](){
+        onSwitchDrawType(DrawType::Path);
+        load(filename);
+    });
+    actPath->setCheckable(true);
+
     actTriangle = smenu->addAction("Triangle", [this](){
         onSwitchDrawType(DrawType::Triangle);
         load(filename);
@@ -284,7 +355,7 @@ void MainWindow::addMenuElems()
     });
     actBinImage->setCheckable(true);
 
-    onSwitchDrawType(DrawType::Triangle);
+    onSwitchDrawType(DrawType::Path);
 }
 
 
@@ -292,6 +363,7 @@ void MainWindow::onSwitchDrawType(DrawType dt)
 {
     drawType = dt;
     actPolygon->setChecked(drawType==DrawType::Polygon);
+    actPath->setChecked(drawType==DrawType::Path);
     actTriangle->setChecked(drawType==DrawType::Triangle);
     actBinImage->setChecked(drawType==DrawType::BinImage);
 }

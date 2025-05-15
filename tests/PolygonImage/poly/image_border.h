@@ -44,7 +44,7 @@ public:
     const uint32_t outer_color = (uint32_t)-1;
 
 protected:
-    void fillBorder(AImage& img, int xstart, int ystart, std::vector<p2t::Point>& border);
+    void fillBorder(AImage& img, int xstart, int ystart, std::vector<p2t::Point>& border, bool border_is_hole);
 
     //Заполняем внешнюю часть изображения белым цветом
     void fillOuter(AImage& img);
