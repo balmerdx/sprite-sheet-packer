@@ -106,6 +106,7 @@ public:
     //Список изображений, которые не пакуются полигонально.
     //У них полигон будет прямоугольником
     const QStringList& getTrimRectList() const { return _trimRectListFiles; }
+    void setTrimRectList(const QStringList& trimRectListFiles) { _trimRectListFiles = trimRectListFiles; }
 
     /*
        Функция, которая читает из файла listFilename находящегося в директории dir список файлов.
@@ -113,7 +114,7 @@ public:
        Если такой файл не найден, то он игнорируется и пишется в лог.
        Разделители частей пути в unix style.
     */
-    static bool loadFilesList(QDir dir, QString listFilename, QString tag, QStringList& filesList);
+    static bool loadFilesList(QDir dir, QString listFilename, QString tag, QStringList& filesList, bool checkFileExists=true);
 protected:
     QString     _algorithm;
     QString     _trimMode;

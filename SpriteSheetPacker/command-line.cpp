@@ -43,6 +43,7 @@ int commandLine(QCoreApplication& app) {
         {"make-polygon-info", "Set directory to store polygon info.", "path", ""},
         {"use-polygon-info", "Set directory to read polygon info.", "path", ""},
         {"disable-save-image", "Then publish save dont save images"},
+        {"trim-rect-list", "Trim this sprites as rect instead poygon.", "path", ""}
     });
 
     parser.process(app);
@@ -123,6 +124,7 @@ int commandLine(QCoreApplication& app) {
     bool enableOverrideSourceListFile = false;
     QStringList overrideSourceListFile;
     bool enableSaveImage = true;
+    QString trimRectList;
 
     if (projectFile) {
         if (!projectFile->read(source.filePath())) {
@@ -269,7 +271,7 @@ int commandLine(QCoreApplication& app) {
         if(verbose) qDebug() << "source-list-file :" << listFilename;
 
         enableOverrideSourceListFile = true;
-        if(!SpritePackerProjectFile::loadFilesList(source.absoluteDir(), listFilename, "source-list-file", overrideSourceListFile))
+        if(!SpritePackerProjectFile::loadFilesList(source.absoluteDir(), listFilename, "source-list-file", overrideSourceListFile, !enableUsePolygonInfo))
         {
             return -1;
         }
@@ -283,6 +285,11 @@ int commandLine(QCoreApplication& app) {
         enableSaveImage = false;
     }
 
+    if (parser.isSet("trim-rect-list"))
+    {
+        trimRectList = parser.value("trim-rect-list");
+        if(verbose) qDebug() << "trim-rect-list :" << trimRectList;
+    }
 
     if(verbose)
     {
@@ -320,6 +327,18 @@ int commandLine(QCoreApplication& app) {
         publisher.setPremultiplied(projectFile->premultiplied());
     }
     publisher.setEnableSaveImage(enableSaveImage);
+
+    if (projectFile && !trimRectList.isEmpty())
+    {
+        QStringList trimRectListFiles;
+        if(!SpritePackerProjectFile::loadFilesList(source.absoluteDir(), trimRectList, "trimRectList", trimRectListFiles, !enableUsePolygonInfo))
+        {
+            qCritical() << "Cannot load:" << trimRectList;
+            return -1;
+        }
+
+        projectFile->setTrimRectList(trimRectListFiles);
+    }
 
 
     // load formats

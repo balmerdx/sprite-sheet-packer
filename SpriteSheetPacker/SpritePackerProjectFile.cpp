@@ -352,7 +352,7 @@ bool SpritePackerProjectFile::loadTrimRectList(QDir dir, QString trimRectList)
 {
     return loadFilesList(dir, trimRectList, "loadTrimRectList", _trimRectListFiles);
 }
-bool SpritePackerProjectFile::loadFilesList(QDir dir, QString listFilename, QString tag, QStringList& filesList)
+bool SpritePackerProjectFile::loadFilesList(QDir dir, QString listFilename, QString tag, QStringList& filesList, bool checkFileExists)
 {
     filesList.clear();
     QString filenameList = dir.absoluteFilePath(listFilename);
@@ -375,7 +375,7 @@ bool SpritePackerProjectFile::loadFilesList(QDir dir, QString listFilename, QStr
             else
                 filename = dir.absoluteFilePath(line);
             QFileInfo fi(filename);
-            if (!fi.exists())
+            if (checkFileExists && !fi.exists())
             {
                 qDebug() << tag << ": File not found :" << filename;
                 continue;

@@ -106,7 +106,7 @@ bool PolygonPackContent::save(QDir storeDir)
         qCritical() << "Cannot save image : " << fullPath;
         return false;
     }
-    QString jsonPath = fullPathInfo.absoluteDir().absoluteFilePath(fullPathInfo.baseName()+".json");
+    QString jsonPath = fullPathInfo.absoluteDir().absoluteFilePath(fullPathInfo.completeBaseName()+".json");
 
     QJsonObject jsonRoot;
     jsonRoot.insert("name", _content.name());
@@ -141,7 +141,7 @@ bool PackContent::load(QDir storeDir, QString name)
     }
 
     QFileInfo fullPathInfo(fullPath);
-    QString jsonPath = fullPathInfo.absoluteDir().absoluteFilePath(fullPathInfo.baseName()+".json");
+    QString jsonPath = fullPathInfo.absoluteDir().absoluteFilePath(fullPathInfo.completeBaseName()+".json");
     QFile file(jsonPath);
     file.open(QIODevice::ReadOnly);
     if (!file.isOpen())
