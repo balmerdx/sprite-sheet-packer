@@ -39,7 +39,16 @@ PolygonImage2::PolygonImage2(const QImage& image, const QRectF& rect, bool packT
                  .copy(lroundf(rect.left()), lroundf(rect.top()), lroundf(rect.width()), lroundf(rect.height()));
 
     ImageBorder ib;
-    ib.construct(_image, ImageBorderParams());
+    ImageBorderParams params;
+
+    if(packToRect)
+    {
+        ib.constructRect(_image);
+    } else
+    {
+        ///!!!! params все параметры по умолчанию, ничего не взяли из настроек !!!!!
+        ib.construct(_image, ImageBorderParams());
+    }
 
     //Кривущая функция, если исходный вектор поменяется/удалится,
     //то указатели на точки станут невалидны

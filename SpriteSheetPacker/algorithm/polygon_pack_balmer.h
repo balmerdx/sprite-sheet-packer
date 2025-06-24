@@ -22,7 +22,7 @@ public:
 
     //Записывает внутри несколько файлов в поддиректории руководстуясь _content.name()
     //Читать будем толко часть внутри PackContent
-    bool save(QDir storeDir);
+    bool save(QDir storeDir, bool premultiplied);
 
     //Тестовое изображение. В нём ненулевые пикcели - это border
     AImage pixel_border;

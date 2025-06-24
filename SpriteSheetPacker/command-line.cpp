@@ -389,6 +389,7 @@ int commandLine(QCoreApplication& app) {
             atlas.enableFindIdentical(enableFindIdentical);
             atlas.setProjectDir(source.absoluteDir());
 
+            atlas.setPremultiplied(projectFile->premultiplied());
             if (enableMakePolygonInfo)
             {
                 atlas.enableFindIdentical(false);

@@ -179,7 +179,7 @@ bool SpriteAtlas::generate(SpriteAtlasGenerateProgress* progress) {
         }
     }
 
-    if (skipSprites)
+    if (skipSprites && verbose)
         qDebug() << "Total skip sprites: " << skipSprites;
 
     bool result = false;
@@ -189,7 +189,7 @@ bool SpriteAtlas::generate(SpriteAtlasGenerateProgress* progress) {
         result = packWithRect(inputContent);
     }
 
-    //if(verbose)
+    if(verbose)
         qDebug() << "Generate time:" <<  QString::number(timePerform.elapsed_sec(), 'f', 3) << "sec";
 
     return result;
@@ -660,7 +660,7 @@ bool SpriteAtlas::packWithPolygon(const QVector<PackContent>& content) {
         //Не пакуем, а только сохраняем полигональную информацию о наших изображениях
         auto outputContent = polygon_pack.contentList();
         for(auto& content : outputContent) {
-            content.save(_storePolygonInfoDir);
+            content.save(_storePolygonInfoDir, _premultiplied);
         }
         return true;
     }

@@ -328,6 +328,18 @@ ImageBorder::~ImageBorder()
 {
 }
 
+void ImageBorder::constructRect(const AImage& image)
+{
+    ImageBorderElem elem;
+    elem.border.push_back(p2t::Point(0,0));
+    elem.border.push_back(p2t::Point(image.width()-1, 0));
+    elem.border.push_back(p2t::Point(image.width()-1, image.height()-1));
+    elem.border.push_back(p2t::Point(0, image.height()-1));
+
+    elems.clear();
+    elems.push_back(elem);
+}
+
 void ImageBorder::construct(const AImage& image, ImageBorderParams params)
 {
     /*

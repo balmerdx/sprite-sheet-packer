@@ -1,4 +1,5 @@
 #include "polygon_pack_balmer.h"
+#include "ImageFormat.h"
 
 PolygonPackContent::PolygonPackContent(const PackContent& content)
     : _content(content)
@@ -88,29 +89,54 @@ static QJsonObject toJson(QPoint p)
     return json;
 }
 
-static QRect fromJson(const QJsonValue& v)
+static QJsonObject toJson(QSize sz)
+{
+    QJsonObject json;
+    json.insert("w", sz.width());
+    json.insert("h", sz.height());
+    return json;
+}
+
+
+static QRect rectFromJson(const QJsonValue& v)
 {
     const QJsonObject o = v.toObject();
     return QRect(o.value("x").toInt(), o.value("y").toInt(), o.value("w").toInt(), o.value("h").toInt());
 }
 
-bool PolygonPackContent::save(QDir storeDir)
+static QSize sizeFromJson(const QJsonValue& v)
+{
+    const QJsonObject o = v.toObject();
+    return QSize(o.value("w").toInt(), o.value("h").toInt());
+}
+
+bool PolygonPackContent::save(QDir storeDir, bool premultiplied)
 {
     QString fullPath = storeDir.absoluteFilePath(_content.name());
     QFileInfo fullPathInfo(fullPath);
     fullPathInfo.dir().mkpath(".");
 
-    //Здесь записать всю информацию PolygonPackContent
-    if(!_content.image().save(fullPath))
     {
-        qCritical() << "Cannot save image : " << fullPath;
-        return false;
+        QImage croppedImage = _content.image().copy(_initial_bound);
+
+        if (premultiplied)
+        {
+            croppedImage = premultImage(croppedImage);
+        }
+
+        if(!croppedImage.save(fullPath))
+        {
+            qCritical() << "Cannot save image : " << fullPath;
+            return false;
+        }
     }
+
     QString jsonPath = fullPathInfo.absoluteDir().absoluteFilePath(fullPathInfo.completeBaseName()+".json");
 
     QJsonObject jsonRoot;
     jsonRoot.insert("name", _content.name());
     jsonRoot.insert("rect", toJson(_content.rect()));
+    jsonRoot.insert("image_size", toJson(_content.image().size()));
     jsonRoot.insert("triangles", _content.triangles().toJson());
     jsonRoot.insert("mask", mask.toJson());
     jsonRoot.insert("offset", toJson(_offset));
@@ -134,12 +160,6 @@ bool PolygonPackContent::save(QDir storeDir)
 bool PackContent::load(QDir storeDir, QString name)
 {
     QString fullPath = storeDir.absoluteFilePath(name);
-    if(!_image.load(fullPath))
-    {
-        qCritical() << "Cannot load image : " << fullPath;
-        return false;
-    }
-
     QFileInfo fullPathInfo(fullPath);
     QString jsonPath = fullPathInfo.absoluteDir().absoluteFilePath(fullPathInfo.completeBaseName()+".json");
     QFile file(jsonPath);
@@ -159,8 +179,34 @@ bool PackContent::load(QDir storeDir, QString name)
         return false;
     }
 
-    _rect = fromJson(jsonRoot.value("rect"));
+    _rect = rectFromJson(jsonRoot.value("rect"));
     _triangles.fromJson(jsonRoot.value("triangles").toObject());
+
+    QRect initialBound = rectFromJson(jsonRoot.value("initial_bound"));
+    QSize imageSize = sizeFromJson(jsonRoot.value("image_size"));
+    {
+        QImage croppedImage;
+        if(!croppedImage.load(fullPath))
+        {
+            qCritical() << "Cannot load image : " << fullPath;
+            return false;
+        }
+
+        _image = QImage(imageSize, croppedImage.format());
+        _image.fill(0);
+        int xmin = initialBound.left();
+        int ymin = initialBound.top();
+        int xmax = initialBound.right();
+        int ymax = initialBound.bottom();
+        for(int y=ymin; y<ymax; y++)
+        {
+            for(int x=xmin; x<xmax; x++)
+            {
+                _image.setPixel(x,y, croppedImage.pixel(x-xmin, y-ymin));
+            }
+        }
+    }
+
     return true;
 }
 
@@ -246,5 +292,6 @@ void PolygonPackBalmer::place()
             break;
     }
 
-    big_image.qimage().save("big_image.png");
+    //test code
+    //big_image.qimage().save("big_image.png");
 }

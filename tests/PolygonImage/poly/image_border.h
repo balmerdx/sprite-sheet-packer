@@ -40,6 +40,8 @@ public:
 
     void construct(const AImage& image, ImageBorderParams params);
 
+    void constructRect(const AImage& image);
+
     AImage32 colors;
     const uint32_t outer_color = (uint32_t)-1;
 

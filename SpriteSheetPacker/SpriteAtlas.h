@@ -75,6 +75,8 @@ public:
 
     //Работает только в случае setAlgorithm("Polygon") и enablePolygonMode(true)
     void setStorePolygonInfoDir(QDir dir) { _storePolygonInfoDir = dir; _enableStorePolygonInfo = true; }
+    //Сохраняемые изображения для последующей сборки атласов могут быть premultiplied
+    void setPremultiplied(bool premultiplied) { _premultiplied = premultiplied; }
     void setUsePolygonInfoDir(QDir dir) { _storePolygonInfoDir = dir; _enableUsePolygonInfo = true; }
     //Директория относительно которой считается relative path для отдельных файлов.
     void setProjectDir(QDir dir) { _projectDir = dir; _isValidProjectDir = true; }
@@ -144,6 +146,7 @@ private:
     bool _enableUsePolygonInfo = false;
     QDir _projectDir;
     bool _isValidProjectDir = false;
+    bool _premultiplied = false;
 };
 
 extern bool verbose;
