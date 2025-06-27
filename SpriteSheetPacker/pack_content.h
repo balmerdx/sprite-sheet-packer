@@ -15,6 +15,7 @@ public:
     //Этот надо вызывать позже, после того как полигональный trim почистил мусор.
     void trim(int alpha);
     void setTriangles(const Triangles& triangles) { _triangles = triangles; }
+    void setRect(const QRect& r) { _rect = r; }
 
     const QString& name() const { return _name; }
     const QImage& image() const { return _image; }

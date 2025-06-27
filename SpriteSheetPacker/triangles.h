@@ -25,7 +25,7 @@ struct Triangles {
     //Предполагаем, что QPoint имеют неотрицательные значения и расположенны недалеко от нуля.
     QImage drawTriangles() const;
 
-    QJsonObject toJson() const;
+    QJsonObject toJson(QPoint offset) const;
     void fromJson(const QJsonObject& jobj);
 };
 

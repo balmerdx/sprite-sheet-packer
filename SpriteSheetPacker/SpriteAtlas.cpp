@@ -517,7 +517,6 @@ bool SpriteAtlas::packWithRect(const QVector<PackContent>& content) {
 
         // retreive your data.
         const PackContent &packContent = content.content;
-        //qDebug() << packContent.mName << packContent.mRect;
 
         // image
         QImage image;

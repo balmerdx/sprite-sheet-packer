@@ -39,15 +39,15 @@ QImage Triangles::drawTriangles() const
     return std::move(out);
 }
 
-QJsonObject Triangles::toJson() const
+QJsonObject Triangles::toJson(QPoint offset) const
 {
     QJsonObject out;
 
     QJsonArray arrVerts;
     for(QPoint p : verts)
     {
-        arrVerts.push_back(p.x());
-        arrVerts.push_back(p.y());
+        arrVerts.push_back(p.x() + offset.x());
+        arrVerts.push_back(p.y() + offset.y());
     }
 
     QJsonArray arrIndices;

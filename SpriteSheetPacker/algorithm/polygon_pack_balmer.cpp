@@ -21,6 +21,8 @@ PolygonPackContent::PolygonPackContent(const PackContent& content)
     }
 
     _initial_bound = _bounds;
+    _content.setRect(_initial_bound);
+
     setOffset(QPoint(-_bounds.left(), -_bounds.top()));
     _area = _bounds.width() * _bounds.height();
 }
@@ -137,7 +139,7 @@ bool PolygonPackContent::save(QDir storeDir, bool premultiplied)
     jsonRoot.insert("name", _content.name());
     jsonRoot.insert("rect", toJson(_content.rect()));
     jsonRoot.insert("image_size", toJson(_content.image().size()));
-    jsonRoot.insert("triangles", _content.triangles().toJson());
+    jsonRoot.insert("triangles", _content.triangles().toJson(_initial_bound.topLeft()));
     jsonRoot.insert("mask", mask.toJson());
     jsonRoot.insert("offset", toJson(_offset));
     jsonRoot.insert("initial_bound", toJson(_initial_bound));
@@ -160,6 +162,7 @@ bool PolygonPackContent::save(QDir storeDir, bool premultiplied)
 bool PackContent::load(QDir storeDir, QString name)
 {
     QString fullPath = storeDir.absoluteFilePath(name);
+
     QFileInfo fullPathInfo(fullPath);
     QString jsonPath = fullPathInfo.absoluteDir().absoluteFilePath(fullPathInfo.completeBaseName()+".json");
     QFile file(jsonPath);
