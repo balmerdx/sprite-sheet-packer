@@ -48,7 +48,7 @@ public:
     void setSpriteBorder(int spriteBorder) { _spriteBorder = spriteBorder; }
     void setContent(const std::vector<PackContent>& contents);
 
-    void place();
+    bool place();
 
     const std::vector<PolygonPackContent>& contentList() const { return _contentList; }
     QRect bounds() const { return _bounds; }

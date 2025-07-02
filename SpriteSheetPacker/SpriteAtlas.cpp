@@ -664,7 +664,8 @@ bool SpriteAtlas::packWithPolygon(const QVector<PackContent>& content) {
         return true;
     }
 
-    polygon_pack.place();
+    if (!polygon_pack.place())
+        return false;
 
     auto outputContent = polygon_pack.contentList();
 

@@ -240,7 +240,7 @@ void PolygonPackBalmer::setContent(const std::vector<PackContent>& contents)
     }
 }
 
-void PolygonPackBalmer::place()
+bool PolygonPackBalmer::place()
 {
 
     std::sort(_contentList.begin(), _contentList.end(), [](const PolygonPackContent& a, const PolygonPackContent& b)
@@ -292,9 +292,10 @@ void PolygonPackBalmer::place()
 
         //Место закончилось, картинки больше не размещаются
         if (!placed)
-            break;
+            return false;
     }
 
     //test code
     //big_image.qimage().save("big_image.png");
+    return true;
 }
