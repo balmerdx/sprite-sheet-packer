@@ -17,8 +17,8 @@ PackContent::PackContent(const QString& name, const QImage& image) {
 bool PackContent::isIdentical(const PackContent& other) {
     if (_rect != other._rect) return false;
 
-    for (int x = _rect.left(); x < _rect.right(); ++x) {
-        for (int y = _rect.top(); y < _rect.bottom(); ++y) {
+    for (int x = _rect.left(); x <= _rect.right(); ++x) {
+        for (int y = _rect.top(); y <= _rect.bottom(); ++y) {
             if (_image.pixel(x, y) != other._image.pixel(x, y)) return false;
         }
     }
